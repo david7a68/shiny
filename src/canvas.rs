@@ -4,8 +4,8 @@ use std::vec;
 
 use crate::{
     color::Color,
-    path::{Path, PathBuilder},
     math::Vec2,
+    path::{Path, PathBuilder},
 };
 
 /// Information for painting paths such as color.
