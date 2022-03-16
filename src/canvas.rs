@@ -4,7 +4,7 @@ use std::vec;
 
 use crate::{
     color::Color,
-    math::Vec2,
+    math::Float2,
     path::{Path, PathBuilder},
 };
 
@@ -46,18 +46,18 @@ impl Canvas {
             this.paths.push(clip.clone());
             this.draws.push(Node {
                 kind: Kind::Clip,
-                offset: Vec2::default(),
+                offset: Float2::default(),
                 path_index: 0,
                 children: vec![],
                 paint_index: 0,
             });
             this.parents.push(0);
         }
-        this.fill_path(clip, Vec2::default(), background);
+        this.fill_path(clip, Float2::default(), background);
         this
     }
 
-    pub fn push_clip(&mut self, path: Path, offset: Vec2) {
+    pub fn push_clip(&mut self, path: Path, offset: Float2) {
         let path_i = self.paths.len();
         self.paths.push(path);
 
@@ -80,7 +80,7 @@ impl Canvas {
         self.parents.pop();
     }
 
-    pub fn fill_path(&mut self, path: Path, offset: Vec2, paint: Paint) {
+    pub fn fill_path(&mut self, path: Path, offset: Float2, paint: Paint) {
         let path_i = self.paths.len();
         self.paths.push(path);
 
@@ -111,7 +111,7 @@ enum Kind {
 #[derive(Debug)]
 struct Node {
     kind: Kind,
-    offset: Vec2,
+    offset: Float2,
     path_index: u32,
 
     // Only used by Kind::Clip

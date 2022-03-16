@@ -1,16 +1,32 @@
-use std::ops::{Add, Sub};
+use std::ops::{Add, Mul, Sub};
 
 #[cfg(target_arch = "x86_64")]
 use super::x86::vector4::*;
+use super::Float4x4;
 
 #[repr(transparent)]
 #[derive(Clone, Copy)]
-pub struct Float4(pub(super) Vector4);
+pub struct Float4(Vector4);
 
 impl Float4 {
     #[inline(always)]
     pub fn new(x: f32, y: f32, z: f32, w: f32) -> Self {
         Self(Vector4::from_tuple(x, y, z, w))
+    }
+
+    #[inline(always)]
+    pub fn splat(value: f32) -> Self {
+        Self(Vector4::from_tuple(value, value, value, value))
+    }
+
+    #[inline(always)]
+    pub fn hsum2(a: Float4, b: Float4) -> (f32, f32) {
+        Vector4::hsum2(a.0, b.0)
+    }
+
+    #[inline(always)]
+    pub fn unpack(&self) -> (f32, f32, f32, f32) {
+        self.0.extract()
     }
 
     #[inline(always)]
@@ -77,6 +93,28 @@ impl Sub for Float4 {
     }
 }
 
+impl Mul<Float4> for f32 {
+    type Output = Float4;
+
+    #[inline(always)]
+    fn mul(self, rhs: Float4) -> Self::Output {
+        rhs.mul_elements(&Float4::splat(self))
+    }
+}
+
+impl Mul<Float4x4> for Float4 {
+    type Output = Float4;
+
+    #[inline(always)]
+    fn mul(self, rhs: Float4x4) -> Self::Output {
+        let r0 = self.x() * *rhs.r0();
+        let r1 = self.y() * *rhs.r1();
+        let r2 = self.z() * *rhs.r2();
+        let r3 = self.w() * *rhs.r3();
+        r0 + r1 + r2 + r3
+    }
+}
+
 impl PartialEq for Float4 {
     #[inline(always)]
     fn eq(&self, other: &Self) -> bool {
@@ -120,5 +158,18 @@ mod tests {
             let v = Float4::new(1.0, 2.0, 3.0, 4.0);
             assert_eq!(v.zwxy(), Float4::new(3.0, 4.0, 1.0, 2.0));
         }
+    }
+
+    #[test]
+    fn float4_x_float4x4() {
+        let v = Float4::new(1.0, 2.0, 3.0, 4.0);
+        let m = Float4x4::new(
+            Float4::new(5.0, 6.0, 7.0, 8.0),
+            Float4::new(9.0, 10.0, 11.0, 12.0),
+            Float4::new(13.0, 14.0, 15.0, 16.0),
+            Float4::new(17.0, 18.0, 19.0, 20.0),
+        );
+
+        assert_eq!(v * m, Float4::new(130.0, 140.0, 150.0, 160.0));
     }
 }
