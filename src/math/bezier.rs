@@ -1,6 +1,9 @@
-use crate::math::{Float4, Float4x4};
+use crate::{
+    arrayvec::ArrayVec,
+    math::{Float2, Float4, Float4x4},
+};
 
-use super::{Point, Rect};
+use super::{line::Line, Point, Rect};
 
 pub struct QuadraticBezier {
     p1: Point,
@@ -39,7 +42,7 @@ impl CubicBezier {
             Float4::new(1.0, 0.0, 0.0, 0.0),
             Float4::new(-3.0, 3.0, 0.0, 0.0),
             Float4::new(3.0, -6.0, 3.0, 0.0),
-            Float4::new(-1.0, 3.0, -3.0, 1.0)
+            Float4::new(-1.0, 3.0, -3.0, 1.0),
         );
 
         let px = Float4::new(self.p0.x(), self.p1.x(), self.p2.x(), self.p3.x());
@@ -79,11 +82,80 @@ impl CubicBezier {
 
         Rect::new(min3.x(), max3.x(), min3.y(), max3.y())
     }
+
+    pub fn intersects_with(&self, rhs: &CubicBezier) -> ArrayVec<f32, 9> {
+        // is lhs a line?
+        // is rhs a line?
+        // cubic-cubic intersection
+
+        let (line1, line2) = line_to_2(self.p0, self.p3, rhs.p0, rhs.p3);
+
+        todo!()
+    }
+}
+
+/// Calculates the lines a->b and c->d simultaneously.
+fn line_to_2(p1: Point, p2: Point, p3: Point, p4: Point) -> (Line, Line) {
+    #[cold]
+    fn _straight_line(p1: Point, p2: Point, p3: Point, p4: Point) -> (Line, Line) {
+        (p1.line_to(p2), p3.line_to(p4))
+    }
+
+    let a = Float4::new(p2.x(), p2.y(), p4.x(), p4.y());
+    let b = Float4::new(p1.x(), p1.y(), p3.x(), p3.y());
+
+    // if neight a->b or c->d are straight lines
+    if a.eq_elements(&b) != 0b0101 {
+        let delta = { a - b };
+        let slopes = delta.div_elements(&delta.yxwz());
+
+        let (_, offset1, _, offset2) = {
+            let f = Float4::new(0.0, p1.x(), 0.0, p3.x());
+            let g = slopes.mul_elements(&f);
+            let h = Float4::new(0.0, p1.y(), 0.0, p3.y());
+            h - g
+        }
+        .unpack();
+
+        let (_, scale1, _, scale2) = {
+            let j = slopes.mul_elements(&slopes);
+            let k = Float4::new(0.0, 1.0, 0.0, 1.0);
+            (j + k).sqrt_elements().unpack()
+        };
+
+        let (_, slope1, _, slope2) = slopes.unpack();
+
+        let line1 = Float4::new(slope1, 1.0, offset1, 0.0).div_elements(&Float4::splat(scale1));
+        let line2 = Float4::new(slope2, 1.0, offset2, 0.0).div_elements(&Float4::splat(scale2));
+
+        (line1.into(), line2.into())
+    } else {
+        _straight_line(p1, p2, p3, p4)
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn line() {
+        let (a, b) = line_to_2(
+            Point(2.0, 2.0),
+            Point(6.0, 4.0),
+            Point(5.0, 1.0),
+            Point(5.0, 12.0),
+        );
+        let (c, d) = (
+            Point(2.0, 2.0).line_to(Point(6.0, 4.0)),
+            Point(5.0, 1.0).line_to(Point(5.0, 12.0)),
+        );
+
+        println!("{:?}:{:?}", b, d);
+
+        assert!(a.approx_equal(&c));
+        assert!(b.approx_equal(&d));
+    }
 
     #[test]
     fn cubic_at() {
@@ -111,5 +183,28 @@ mod tests {
         let bounds = bezier.coarse_bounds();
 
         assert_eq!(bounds, Rect::new(3.0, 12.0, 5.0, 20.0));
+    }
+
+    #[test]
+    fn intersects_with() {
+        {
+            let b1 = CubicBezier {
+                p0: Point(50.0, 35.0),
+                p1: Point(45.0, 235.0),
+                p2: Point(220.0, 235.0),
+                p3: Point(220.0, 135.0),
+            };
+
+            let b2 = CubicBezier {
+                p0: Point(113.0, 112.0),
+                p1: Point(120.0, 20.0),
+                p2: Point(220.0, 95.0),
+                p3: Point(140.0, 240.0),
+            };
+
+            let v = b1.intersects_with(&b2);
+            assert_eq!(v.len(), 1);
+            // assert!((v[0] - ))
+        }
     }
 }

@@ -124,9 +124,18 @@ impl PathBuilder {
         self
     }
 
+    pub fn iter(&self) -> SegmentIter {
+        SegmentIter {
+            cursor: 0,
+            commands: &self.commands,
+            path_data: &self.path_data,
+            position: Point::default(),
+        }
+    }
+
     pub fn build(self) -> Path {
         Path {
-            inner: self.build_inner().map(|s| Arc::new(s)),
+            inner: self.build_inner().map(Arc::new),
         }
     }
 

@@ -3,15 +3,37 @@ use std::ops::{Add, Div, Mul, Sub};
 /// A vector in 2D space.
 #[derive(Clone, Copy, Default, PartialEq)]
 #[allow(non_camel_case_types)]
-pub struct Float2(pub f32, pub f32);
+pub struct Float2(f32, f32);
 
 impl Float2 {
+    pub fn new(x: f32, y: f32) -> Self {
+        Self(x, y)
+    }
+
     pub fn x(self) -> f32 {
         self.0
     }
 
     pub fn y(self) -> f32 {
         self.1
+    }
+
+    pub fn length(self) -> f32 {
+        self.length2().sqrt()
+    }
+
+    pub fn length2(self) -> f32 {
+        self.0 * self.0 + self.1 * self.1
+    }
+
+    pub fn normalize(self) -> Self {
+        self / self.length()
+    }
+
+    pub fn dot(self, rhs: Self) -> f32 {
+        let x = self.x() * rhs.x();
+        let y = self.y() * rhs.y();
+        x + y
     }
 }
 

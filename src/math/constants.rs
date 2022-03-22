@@ -1,0 +1,1 @@
+pub const APPROX_EQUAL_THRESHOLD: f32 = 1e-6;

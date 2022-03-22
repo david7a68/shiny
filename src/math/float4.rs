@@ -2,11 +2,11 @@ use std::ops::{Add, Mul, Sub};
 
 #[cfg(target_arch = "x86_64")]
 use super::x86::vector4::*;
-use super::Float4x4;
+use super::{Float4x4, line::Line};
 
 #[repr(transparent)]
 #[derive(Clone, Copy)]
-pub struct Float4(Vector4);
+pub struct Float4(pub(super) Vector4);
 
 impl Float4 {
     #[inline(always)]
@@ -16,7 +16,7 @@ impl Float4 {
 
     #[inline(always)]
     pub fn splat(value: f32) -> Self {
-        Self(Vector4::from_tuple(value, value, value, value))
+        Self(Vector4::splat(value))
     }
 
     #[inline(always)]
@@ -55,6 +55,11 @@ impl Float4 {
     }
 
     #[inline(always)]
+    pub fn yxwz(&self) -> Self {
+        Self(self.0.yxwz())
+    }
+
+    #[inline(always)]
     pub fn max(&self, rhs: &Self) -> Self {
         Self(self.0.max(rhs.0))
     }
@@ -72,6 +77,16 @@ impl Float4 {
     #[inline(always)]
     pub fn div_elements(&self, rhs: &Self) -> Self {
         Self(self.0.div(rhs.0))
+    }
+
+    #[inline(always)]
+    pub fn sqrt_elements(&self) -> Self {
+        Self(self.0.sqrt())
+    }
+
+    #[inline(always)]
+    pub fn eq_elements(&self, rhs: &Self) -> u32 {
+        unsafe { std::mem::transmute(self.0.eq(rhs.0)) }
     }
 }
 
@@ -118,7 +133,7 @@ impl Mul<Float4x4> for Float4 {
 impl PartialEq for Float4 {
     #[inline(always)]
     fn eq(&self, other: &Self) -> bool {
-        self.0.eq(other.0)
+        self.0.eq(other.0) == 0b1111
     }
 }
 
@@ -126,7 +141,13 @@ impl PartialEq<(f32, f32, f32, f32)> for Float4 {
     #[inline(always)]
     fn eq(&self, other: &(f32, f32, f32, f32)) -> bool {
         self.0
-            .eq(Vector4::from_tuple(other.0, other.1, other.2, other.3))
+            .eq(Vector4::from_tuple(other.0, other.1, other.2, other.3)) == 0b1111
+    }
+}
+
+impl Into<Line> for Float4 {
+    fn into(self) -> Line {
+        Line::from_vector(self)
     }
 }
 

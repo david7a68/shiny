@@ -1,6 +1,7 @@
 use std::arch::x86_64::{
-    __m128, _mm_add_ps, _mm_cmp_ps, _mm_div_ps, _mm_max_ps, _mm_min_ps, _mm_movemask_ps,
-    _mm_mul_ps, _mm_set_ps, _mm_shuffle_ps, _mm_sub_ps,
+    __m128, _mm_add_ps, _mm_andnot_ps, _mm_castsi128_ps, _mm_cmp_ps, _mm_div_ps, _mm_max_ps,
+    _mm_min_ps, _mm_movemask_ps, _mm_mul_ps, _mm_set1_epi32, _mm_set1_ps, _mm_set_ps,
+    _mm_shuffle_ps, _mm_sqrt_ps, _mm_sub_ps, _CMP_LT_OQ, _CMP_EQ_OQ,
 };
 
 use super::utils::_MM_SHUFFLE;
@@ -13,6 +14,11 @@ impl Vector4 {
     #[inline(always)]
     pub fn from_tuple(x: f32, y: f32, z: f32, w: f32) -> Self {
         Self(unsafe { _mm_set_ps(w, z, y, x) })
+    }
+
+    #[inline(always)]
+    pub fn splat(v: f32) -> Self {
+        Self(unsafe { _mm_set1_ps(v) })
     }
 
     #[inline(always)]
@@ -39,6 +45,11 @@ impl Vector4 {
     }
 
     #[inline(always)]
+    pub fn yxwz(&self) -> Self {
+        Self(unsafe { _mm_shuffle_ps(self.0, self.0, _MM_SHUFFLE(2, 3, 0, 1)) })
+    }
+
+    #[inline(always)]
     pub fn add(&self, b: Self) -> Self {
         Self(unsafe { _mm_add_ps(self.0, b.0) })
     }
@@ -59,6 +70,11 @@ impl Vector4 {
     }
 
     #[inline(always)]
+    pub fn sqrt(&self) -> Self {
+        Self(unsafe { _mm_sqrt_ps(self.0) })
+    }
+
+    #[inline(always)]
     pub fn max(&self, b: Self) -> Self {
         Self(unsafe { _mm_max_ps(self.0, b.0) })
     }
@@ -69,8 +85,34 @@ impl Vector4 {
     }
 
     #[inline(always)]
-    pub fn eq(&self, b: Self) -> bool {
-        unsafe { _mm_movemask_ps(_mm_cmp_ps(self.0, b.0, 0)) == 0b1111 }
+    pub fn abs(&self) -> Self {
+        unsafe {
+            let mask = _mm_castsi128_ps(_mm_set1_epi32(1 << 31));
+            Self(_mm_andnot_ps(mask, self.0))
+        }
+    }
+
+    #[inline(always)]
+    /// Sets each of the first 4 bits to true if equal.
+    pub fn eq(&self, b: Self) -> i32 {
+        unsafe { _mm_movemask_ps(_mm_cmp_ps(self.0, b.0, 0)) }
+    }
+
+    #[inline(always)]
+    /// Sets each of the first 4 bits to true if equal.
+    pub fn less(&self, rhs: &Self) -> i32 {
+        unsafe { _mm_movemask_ps(_mm_cmp_ps(self.0, rhs.0, _CMP_LT_OQ)) }
+    }
+}
+
+impl std::fmt::Debug for Vector4 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Vector4")
+            .field("x", &self.extract().0)
+            .field("y", &self.extract().1)
+            .field("z", &self.extract().2)
+            .field("w", &self.extract().3)
+            .finish()
     }
 }
 
@@ -88,5 +130,38 @@ mod tests {
         // Close enough for something simple like this.
         assert!((c - 10.0).abs() < 0.0001);
         assert!((d - 26.0).abs() < 0.0001);
+    }
+
+    #[test]
+    fn swizzle() {
+        let a = (1.0, 2.0, 3.0, 4.0);
+        let b = Vector4::from_tuple(a.0, a.1, a.2, a.3).yxwz().extract();
+
+        println!("{:?}", b);
+
+        assert_eq!(b.0, a.1);
+        assert_eq!(b.1, a.0);
+        assert_eq!(b.2, a.3);
+        assert_eq!(b.3, a.2);
+    }
+
+    #[test]
+    fn abs() {
+        let a = Vector4::from_tuple(1.0, -1.0, f32::NAN, f32::NEG_INFINITY);
+        let b = a.abs();
+
+        let (x, y, z, w) = b.extract();
+
+        assert_eq!(x, 1.0);
+        assert_eq!(y, 1.0);
+        assert!(z.is_nan());
+        assert_eq!(w, f32::INFINITY);
+    }
+
+    #[test]
+    fn eq() {
+        let a = Vector4::from_tuple(1.0, 2.0, 3.0, 4.0);
+
+        assert!(a.eq(a) == 0b1111);
     }
 }
