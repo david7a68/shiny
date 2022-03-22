@@ -1,7 +1,7 @@
 use std::arch::x86_64::{
     __m128, _mm_add_ps, _mm_andnot_ps, _mm_castsi128_ps, _mm_cmp_ps, _mm_div_ps, _mm_max_ps,
     _mm_min_ps, _mm_movemask_ps, _mm_mul_ps, _mm_set1_epi32, _mm_set1_ps, _mm_set_ps,
-    _mm_shuffle_ps, _mm_sqrt_ps, _mm_sub_ps, _CMP_LT_OQ, _CMP_EQ_OQ,
+    _mm_shuffle_ps, _mm_sqrt_ps, _mm_sub_ps, _CMP_EQ_OQ, _CMP_LT_OQ,
 };
 
 use super::utils::_MM_SHUFFLE;
@@ -93,13 +93,15 @@ impl Vector4 {
     }
 
     #[inline(always)]
-    /// Sets each of the first 4 bits to true if equal.
+    /// Sets each of the first 4 bits to true if equal. 1st bit for element 1
+    /// (usually x), 2nd bit for element 2, etc.
     pub fn eq(&self, b: Self) -> i32 {
-        unsafe { _mm_movemask_ps(_mm_cmp_ps(self.0, b.0, 0)) }
+        unsafe { _mm_movemask_ps(_mm_cmp_ps(self.0, b.0, _CMP_EQ_OQ)) }
     }
 
     #[inline(always)]
-    /// Sets each of the first 4 bits to true if equal.
+    /// Sets each of the first 4 bits to true if equal. 1st bit for element 1
+    /// (usually x), 2nd bit for element 2, etc.
     pub fn less(&self, rhs: &Self) -> i32 {
         unsafe { _mm_movemask_ps(_mm_cmp_ps(self.0, rhs.0, _CMP_LT_OQ)) }
     }
@@ -161,7 +163,16 @@ mod tests {
     #[test]
     fn eq() {
         let a = Vector4::from_tuple(1.0, 2.0, 3.0, 4.0);
-
         assert!(a.eq(a) == 0b1111);
+    }
+
+    #[test]
+    fn less() {
+        let a = Vector4::from_tuple(1.0, 2.0, 3.0, 4.0);
+        let b = Vector4::from_tuple(1.0, 1.0, 4.0, 2.0);
+
+        assert_eq!(a.less(&a), 0);
+        assert_eq!(b.less(&b), 0);
+        assert_eq!(b.less(&a), 0b1010);
     }
 }

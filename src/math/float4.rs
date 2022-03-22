@@ -2,7 +2,7 @@ use std::ops::{Add, Mul, Sub};
 
 #[cfg(target_arch = "x86_64")]
 use super::x86::vector4::*;
-use super::{Float4x4, line::Line};
+use super::{Float4x4};
 
 #[repr(transparent)]
 #[derive(Clone, Copy)]
@@ -141,13 +141,8 @@ impl PartialEq<(f32, f32, f32, f32)> for Float4 {
     #[inline(always)]
     fn eq(&self, other: &(f32, f32, f32, f32)) -> bool {
         self.0
-            .eq(Vector4::from_tuple(other.0, other.1, other.2, other.3)) == 0b1111
-    }
-}
-
-impl Into<Line> for Float4 {
-    fn into(self) -> Line {
-        Line::from_vector(self)
+            .eq(Vector4::from_tuple(other.0, other.1, other.2, other.3))
+            == 0b1111
     }
 }
 

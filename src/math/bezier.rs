@@ -1,6 +1,6 @@
 use crate::{
     arrayvec::ArrayVec,
-    math::{Float2, Float4, Float4x4},
+    math::{Float4, Float4x4},
 };
 
 use super::{line::Line, Point, Rect};
@@ -84,10 +84,6 @@ impl CubicBezier {
     }
 
     pub fn intersects_with(&self, rhs: &CubicBezier) -> ArrayVec<f32, 9> {
-        // is lhs a line?
-        // is rhs a line?
-        // cubic-cubic intersection
-
         let (line1, line2) = line_to_2(self.p0, self.p3, rhs.p0, rhs.p3);
 
         todo!()
@@ -98,14 +94,14 @@ impl CubicBezier {
 fn line_to_2(p1: Point, p2: Point, p3: Point, p4: Point) -> (Line, Line) {
     #[cold]
     fn _straight_line(p1: Point, p2: Point, p3: Point, p4: Point) -> (Line, Line) {
-        (p1.line_to(p2), p3.line_to(p4))
+        (Line::between(p1, p2), Line::between(p3, p4))
     }
 
     let a = Float4::new(p2.x(), p2.y(), p4.x(), p4.y());
     let b = Float4::new(p1.x(), p1.y(), p3.x(), p3.y());
 
     // if neight a->b or c->d are straight lines
-    if a.eq_elements(&b) != 0b0101 {
+    if (a.eq_elements(&b) & 0b0101) == 0 {
         let delta = { a - b };
         let slopes = delta.div_elements(&delta.yxwz());
 
@@ -128,7 +124,12 @@ fn line_to_2(p1: Point, p2: Point, p3: Point, p4: Point) -> (Line, Line) {
         let line1 = Float4::new(slope1, 1.0, offset1, 0.0).div_elements(&Float4::splat(scale1));
         let line2 = Float4::new(slope2, 1.0, offset2, 0.0).div_elements(&Float4::splat(scale2));
 
-        (line1.into(), line2.into())
+        unsafe {
+            (
+                Line::from_normalized_vector(line1),
+                Line::from_normalized_vector(line2),
+            )
+        }
     } else {
         _straight_line(p1, p2, p3, p4)
     }
@@ -147,12 +148,9 @@ mod tests {
             Point(5.0, 12.0),
         );
         let (c, d) = (
-            Point(2.0, 2.0).line_to(Point(6.0, 4.0)),
-            Point(5.0, 1.0).line_to(Point(5.0, 12.0)),
+            Line::between(Point(2.0, 2.0), Point(6.0, 4.0)),
+            Line::between(Point(5.0, 1.0), Point(5.0, 12.0)),
         );
-
-        println!("{:?}:{:?}", b, d);
-
         assert!(a.approx_equal(&c));
         assert!(b.approx_equal(&d));
     }
