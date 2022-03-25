@@ -1,6 +1,9 @@
+use std::ops::RangeBounds;
+
 use crate::{
     arrayvec::ArrayVec,
     math::{Float4, Float4x4},
+    utils::{max, min},
 };
 
 use super::{line::Line, Point, Rect};
@@ -86,7 +89,249 @@ impl CubicBezier {
     pub fn intersects_with(&self, rhs: &CubicBezier) -> ArrayVec<f32, 9> {
         let (line1, line2) = line_to_2(self.p0, self.p3, rhs.p0, rhs.p3);
 
+        // if the end points of self lie within the fat line of rhs or
+        // if the end points of rhs lie within the fat line of self
+        // the two lines contain multiple intersections, and one of the curves must be split at the midpoint.
+
+        let d1 = line1.distance_to(self.p1);
+        let d2 = line1.distance_to(self.p2);
+
+        let half_width = if d1 * d2 > 0.0 { 3.0 / 4.0 } else { 4.0 / 9.0 };
+
+        let d_min = d1.min(d2.min(0.0)) * half_width;
+        let d_max = d1.max(d2.max(0.0)) * half_width;
+
+        // let t_min = t where line1.distance_to(self.at(t)) < d_min, note that it may never be < d_min
+        // let t_max = t where line1.distance_to(self.at(t)) > d_max, note that it may never be > d_max
+
+        // isolate rhs from t_min..t_max
+        // swap rhs and lhs, and repeat
+
         todo!()
+    }
+
+    fn get<R>(&self, range: R) -> CubicBezierSlice
+    where
+        R: RangeBounds<f32>,
+    {
+        let start = match range.start_bound() {
+            std::ops::Bound::Included(s) => *s,
+            std::ops::Bound::Excluded(s) => *s,
+            std::ops::Bound::Unbounded => 0.0,
+        };
+
+        let end = match range.end_bound() {
+            std::ops::Bound::Included(e) => *e,
+            std::ops::Bound::Excluded(e) => *e,
+            std::ops::Bound::Unbounded => 1.0,
+        };
+
+        CubicBezierSlice {
+            bezier: &self,
+            start,
+            end,
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+struct CubicBezierSlice<'a> {
+    bezier: &'a CubicBezier,
+    start: f32,
+    end: f32,
+}
+
+impl<'a> CubicBezierSlice<'a> {
+    fn p0(&self) -> Point {
+        self.bezier.p0
+    }
+
+    fn p1(&self) -> Point {
+        self.bezier.p1
+    }
+
+    fn p2(&self) -> Point {
+        self.bezier.p2
+    }
+
+    fn p3(&self) -> Point {
+        self.bezier.p3
+    }
+
+    fn get<R>(&self, range: R) -> CubicBezierSlice<'a>
+    where
+        R: RangeBounds<f32>,
+    {
+        let start = match range.start_bound() {
+            std::ops::Bound::Included(s) => *s,
+            std::ops::Bound::Excluded(s) => *s,
+            std::ops::Bound::Unbounded => 0.0,
+        };
+
+        let end = match range.end_bound() {
+            std::ops::Bound::Included(e) => *e,
+            std::ops::Bound::Excluded(e) => *e,
+            std::ops::Bound::Unbounded => 1.0,
+        };
+
+        let span = self.end - self.start;
+        CubicBezierSlice {
+            bezier: self.bezier,
+            start: self.start + (span * start),
+            end: self.end + (span * end),
+        }
+    }
+}
+
+/// Removes intersections between two curves, replacing each with
+/// non-intersecting spans. The resulting arrays of curves are in-order from t=0
+/// to t=1.
+///
+/// This process makes use of the bezier clipping algorithm to identify
+/// curve-curve intersections.
+fn flatten<'a, 'b>(
+    lhs: &'a CubicBezier,
+    rhs: &'b CubicBezier,
+) -> (
+    ArrayVec<CubicBezierSlice<'a>, 10>,
+    ArrayVec<CubicBezierSlice<'b>, 10>,
+) {
+    let mut a = lhs.get(..);
+    let mut b = rhs.get(..);
+
+    let mut lhs_intersections = ArrayVec::<f32, 10>::new();
+    let mut rhs_intersections = ArrayVec::<f32, 10>::new();
+    let mut iterations = 0;
+    loop {
+        let a_ok = (a.end - a.start) < 0.0001;
+        let b_ok = (b.end - b.start) < 0.0001;
+        if a_ok & b_ok {
+            if (iterations & 1) == 0 {
+                lhs_intersections.push(a.end);
+                rhs_intersections.push(b.end);
+            } else {
+                lhs_intersections.push(b.end);
+                rhs_intersections.push(a.end);
+            }
+            break;
+        }
+
+        let (l, r) = clip(&a, &b);
+
+        // if l.diff or r.diff shrank by less than 20%, split the longest one in
+        // half and try again.
+
+        a = r;
+        b = l;
+        iterations += 1;
+    }
+
+    lhs_intersections.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    rhs_intersections.sort_by(|a, b| a.partial_cmp(b).unwrap());
+
+    /*
+    The Bezier Clipping Method:
+
+    1. To clip P(t) against Q(u)...
+        a. Identify the fat line L that bounds Q(u).
+            i. Optionally, identify the fat line K perpendicular to Q(u) and
+               select the narrower of the two.
+        b. Identify the intervals of P(t) that fall outside L.
+        c. Extract the sub-curve of P(t) that lies inside L using the
+           de Casteljau method.
+        d. Return the result as P₂(t) aka P(t₁..t₂)
+    2. Repeat (1), clipping Q(u) against P₂(t) to produce Q₂(u).
+    3. Repeat (1) again clipping P₂(t) against, Q₂(u) to produce P₃(t).
+    4. Repeat until t₁ ≈ t₂ and u₁ ≈ u₂, within some error margin.
+    5. Finish with t and u as the identified interpolation factor.
+
+    On Identifying Multiple Intersections:
+
+    1. Heuristic: If a Bezier clip fails to reduce the parameter range of either
+       curve by at least 20%, subdivide the curve with the largest remaining
+       interval in half and test each segment separately.
+       a. Apply recursively until all intersections (max 9) have been found.
+       b. Sort the resulting interpolation factors 0-1.
+    */
+
+    let lhs_result = ArrayVec::new();
+    let rhs_result = ArrayVec::new();
+
+    // create spans 0..1 interrupted by intersection points
+
+    (lhs_result, rhs_result)
+}
+
+fn clip<'a, 'b>(
+    a: &CubicBezierSlice<'a>,
+    b: &CubicBezierSlice<'b>,
+) -> (CubicBezierSlice<'a>, CubicBezierSlice<'b>) {
+    // 1. Identify the fat line that bounds a.
+    let (l_min, l_max) = {
+        let line = Line::between(a.p0(), a.p3());
+        let l1 = line.parallel_through(a.p1());
+        let l2 = line.parallel_through(a.p3());
+
+        let min_c = min!(line.c(), l1.c(), l2.c());
+        let max_c = max!(line.c(), l1.c(), l2.c());
+
+        // Negate min to keep the curve in the positive half-space.
+        (-Line::with_c(line, min_c), Line::with_c(line, max_c))
+    };
+
+    // Extract the curve that lies within the fat line
+    let clipped_min = clip_against_line(l_min, &b);
+    let clipped_max = clip_against_line(l_max, &b);
+
+    // use the smallest possible fit
+    let low = min!(clipped_min.0, clipped_max.0);
+    let high = min!(clipped_min.1, clipped_max.1);
+
+    (*a, b.get(low..high))
+}
+
+/// Clips a curve against a line, returning the span within which the curve is
+/// above the line.
+fn clip_against_line(line: Line, curve: &CubicBezierSlice) -> (f32, f32) {
+    let e0 = Point(0.0, line.distance_to(curve.p0()));
+    let e1 = Point(1.0, line.distance_to(curve.p1()));
+    let e2 = Point(2.0, line.distance_to(curve.p2()));
+    let e3 = Point(3.0, line.distance_to(curve.p3()));
+
+    if {
+        // if all 4 points are below 0, clip the entire thing.
+        let v = Float4::new(e0.y(), e1.y(), e2.y(), e3.y());
+        (v.lt_elements(&Float4::splat(0.0))) == (true, true, true, true)
+    } {
+        (0.0, 0.0)
+    } else {
+        // If e0 lies below the line, clip the left side of the curve.
+        let low = if e0.y() < 0.0 {
+            let l1 = Line::between(e0, e1);
+            let l2 = Line::between(e0, e2);
+            let l3 = Line::between(e0, e3);
+            let x1 = l1.x_intercept();
+            let x2 = l2.x_intercept();
+            let x3 = l3.x_intercept();
+            min!(x1, x2, x3)
+        } else {
+            0.0
+        };
+
+        // If e3 lies below the line, clip the right side of the curve.
+        let high = if e3.y() < 0.0 {
+            let l1 = Line::between(e3, e2);
+            let l2 = Line::between(e3, e1);
+            let l3 = Line::between(e3, e0);
+            let x1 = l1.x_intercept();
+            let x2 = l2.x_intercept();
+            let x3 = l3.x_intercept();
+            max!(x1, x2, x3)
+        } else {
+            1.0
+        };
+
+        (low, high)
     }
 }
 
@@ -101,7 +346,7 @@ fn line_to_2(p1: Point, p2: Point, p3: Point, p4: Point) -> (Line, Line) {
     let b = Float4::new(p1.x(), p1.y(), p3.x(), p3.y());
 
     // if neight a->b or c->d are straight lines
-    if (a.eq_elements(&b) & 0b0101) == 0 {
+    if a.eq_elements(&b) == (false, true, false, true) {
         let delta = { a - b };
         let slopes = delta.div_elements(&delta.yxwz());
 

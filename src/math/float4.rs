@@ -88,6 +88,11 @@ impl Float4 {
     pub fn eq_elements(&self, rhs: &Self) -> (bool, bool, bool, bool) {
         self.0.eq(rhs.0)
     }
+
+    #[inline(always)]
+    pub fn lt_elements(&self, rhs: &Self) -> (bool, bool, bool, bool) {
+        self.0.less(&rhs.0)
+    }
 }
 
 impl Add for Float4 {

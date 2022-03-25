@@ -1,3 +1,5 @@
+use std::ops::Neg;
+
 use super::{constants::APPROX_EQUAL_THRESHOLD, x86::vector4::Vector4, Float4, Point};
 
 /// A line, held in normalized standard form.
@@ -17,6 +19,13 @@ impl Line {
 
         Self {
             parts: v.div(Vector4::splat(div)),
+        }
+    }
+
+    pub fn with_c(other: Line, c: f32) -> Self {
+        let (a, b, ..) = other.parts.extract();
+        Self {
+            parts: Vector4::from_tuple(a, b, c, 0.0)
         }
     }
 
@@ -58,6 +67,10 @@ impl Line {
         }
     }
 
+    pub fn x_intercept(&self) -> f32 {
+        self.a() / self.c()
+    }
+
     /// Calculates the distance from `point` to the nearest point on the line.
     pub fn distance_to(&self, point: Point) -> f32 {
         (self.a() * point.x() + self.b() * point.y() + self.c()).abs()
@@ -66,13 +79,33 @@ impl Line {
     pub fn approx_equal(&self, rhs: &Self) -> bool {
         let diff = self.parts.sub(rhs.parts).abs();
         let limit = Vector4::splat(APPROX_EQUAL_THRESHOLD);
-        diff.less(&limit) == 0b1111
+        diff.less(&limit) == (true, true, true, true)
+    }
+
+    /// Calculates a line parallel to the current line that passes through
+    /// `point`.
+    pub fn parallel_through(&self, point: Point) -> Self {
+        let c = -(self.a() * point.x()) - self.b() * point.y();
+        Line {
+            parts: Vector4::from_tuple(self.a(), self.b(), c, 0.0),
+        }
+    }
+}
+
+impl Neg for Line {
+    type Output = Self;
+
+    fn neg(self) -> Self::Output {
+        let (a, b, c, _) = self.parts.extract();
+        Line {
+            parts: Vector4::from_tuple(-a, -b, c, 0.0)
+        }
     }
 }
 
 impl PartialEq for Line {
     fn eq(&self, other: &Self) -> bool {
-        self.parts.eq(other.parts) == 0b111
+        self.parts.eq(other.parts) == (true, true, true, false)
     }
 }
 
@@ -93,14 +126,23 @@ mod tests {
     #[test]
     fn between_points() {
         {
+            // regular line
             let line = Line::between(Point(2.0, 2.0), Point(6.0, 4.0));
             assert!(line.approx_equal(&Line::new(0.4472136, -0.8944272, 0.8944272)));
             assert_eq!(line.at_x(2.0).unwrap().y(), 2.0);
             assert_eq!(line.at_x(6.0).unwrap().y(), 4.0);
         }
         {
+            // vertical line
             let line = Line::between(Point(5.0, 1.0), Point(5.0, 12.0));
             assert_eq!(line.at_x(1.0), None);
+        }
+        {
+            // horizontal line
+            let line = Line::between(Point(2.0, 2.0), Point(6.0, 2.0));
+            assert_eq!(line.at_x(2.0).unwrap().y(), 2.0);
+            assert_eq!(line.at_x(6.0).unwrap().y(), 2.0);
+            assert_eq!(line.at_x(100.0).unwrap().y(), 2.0);
         }
     }
 
