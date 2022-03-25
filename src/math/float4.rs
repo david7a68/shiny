@@ -85,8 +85,8 @@ impl Float4 {
     }
 
     #[inline(always)]
-    pub fn eq_elements(&self, rhs: &Self) -> u32 {
-        unsafe { std::mem::transmute(self.0.eq(rhs.0)) }
+    pub fn eq_elements(&self, rhs: &Self) -> (bool, bool, bool, bool) {
+        self.0.eq(rhs.0)
     }
 }
 
@@ -133,7 +133,7 @@ impl Mul<Float4x4> for Float4 {
 impl PartialEq for Float4 {
     #[inline(always)]
     fn eq(&self, other: &Self) -> bool {
-        self.0.eq(other.0) == 0b1111
+        self.0.eq_mask(other.0) == 0b1111
     }
 }
 
@@ -141,7 +141,7 @@ impl PartialEq<(f32, f32, f32, f32)> for Float4 {
     #[inline(always)]
     fn eq(&self, other: &(f32, f32, f32, f32)) -> bool {
         self.0
-            .eq(Vector4::from_tuple(other.0, other.1, other.2, other.3))
+            .eq_mask(Vector4::from_tuple(other.0, other.1, other.2, other.3))
             == 0b1111
     }
 }

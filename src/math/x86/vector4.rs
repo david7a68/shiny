@@ -95,15 +95,22 @@ impl Vector4 {
     #[inline(always)]
     /// Sets each of the first 4 bits to true if equal. 1st bit for element 1
     /// (usually x), 2nd bit for element 2, etc.
-    pub fn eq(&self, b: Self) -> i32 {
+    pub fn eq_mask(&self, b: Self) -> i32 {
         unsafe { _mm_movemask_ps(_mm_cmp_ps(self.0, b.0, _CMP_EQ_OQ)) }
+    }
+
+    #[inline(always)]
+    pub fn eq(&self, b: Self) -> (bool, bool, bool, bool) {
+        let mask = unsafe { _mm_movemask_ps(_mm_cmp_ps(self.0, b.0, _CMP_EQ_OQ)) };
+        ((mask & 0b1) != 0, (mask & 0b10) != 0, (mask & 0b100) != 0, (mask & 0b1000) != 0)
     }
 
     #[inline(always)]
     /// Sets each of the first 4 bits to true if equal. 1st bit for element 1
     /// (usually x), 2nd bit for element 2, etc.
-    pub fn less(&self, rhs: &Self) -> i32 {
-        unsafe { _mm_movemask_ps(_mm_cmp_ps(self.0, rhs.0, _CMP_LT_OQ)) }
+    pub fn less(&self, rhs: &Self) -> (bool, bool, bool, bool) {
+        let mask = unsafe { _mm_movemask_ps(_mm_cmp_ps(self.0, rhs.0, _CMP_LT_OQ)) };
+        ((mask & 0b1) != 0, (mask & 0b10) != 0, (mask & 0b100) != 0, (mask & 0b1000) != 0)
     }
 }
 
@@ -163,7 +170,7 @@ mod tests {
     #[test]
     fn eq() {
         let a = Vector4::from_tuple(1.0, 2.0, 3.0, 4.0);
-        assert!(a.eq(a) == 0b1111);
+        assert!(a.eq_mask(a) == 0b1111);
     }
 
     #[test]
@@ -171,8 +178,8 @@ mod tests {
         let a = Vector4::from_tuple(1.0, 2.0, 3.0, 4.0);
         let b = Vector4::from_tuple(1.0, 1.0, 4.0, 2.0);
 
-        assert_eq!(a.less(&a), 0);
-        assert_eq!(b.less(&b), 0);
-        assert_eq!(b.less(&a), 0b1010);
+        assert_eq!(a.less(&a), (false, false, false, false));
+        assert_eq!(b.less(&b), (false, false, false, false));
+        assert_eq!(b.less(&a), (false, true, false, true));
     }
 }
