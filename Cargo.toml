@@ -1,9 +1,2 @@
-[package]
-name = "shiny"
-version = "0.1.0"
-edition = "2021"
-
-[release]
-debug = 1
-
-[dependencies]
+[workspace]
+members = ["crates/*"]

@@ -1,6 +1,6 @@
 use std::ops::Mul;
 
-use super::Float4;
+use super::float4::Float4;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Float4x4(Float4, Float4, Float4, Float4);

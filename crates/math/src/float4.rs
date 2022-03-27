@@ -1,8 +1,9 @@
 use std::ops::{Add, Mul, Sub};
 
+use super::float4x4::Float4x4;
+
 #[cfg(target_arch = "x86_64")]
 use super::x86::vector4::*;
-use super::{Float4x4};
 
 #[repr(transparent)]
 #[derive(Clone, Copy)]

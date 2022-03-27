@@ -1,12 +1,11 @@
 use std::ops::RangeBounds;
 
-use crate::{
-    arrayvec::ArrayVec,
-    math::{Float4, Float4x4},
-    utils::{max, min},
-};
+use super::{float4::Float4, float4x4::Float4x4};
 
-use super::{line::Line, Point, Rect};
+use utils::arrayvec::ArrayVec;
+use utils::{max, min};
+
+use super::{line::Line, point::Point, rect::Rect};
 
 pub struct QuadraticBezier {
     p1: Point,

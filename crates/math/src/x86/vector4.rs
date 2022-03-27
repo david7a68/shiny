@@ -102,7 +102,12 @@ impl Vector4 {
     #[inline(always)]
     pub fn eq(&self, b: Self) -> (bool, bool, bool, bool) {
         let mask = unsafe { _mm_movemask_ps(_mm_cmp_ps(self.0, b.0, _CMP_EQ_OQ)) };
-        ((mask & 0b1) != 0, (mask & 0b10) != 0, (mask & 0b100) != 0, (mask & 0b1000) != 0)
+        (
+            (mask & 0b1) != 0,
+            (mask & 0b10) != 0,
+            (mask & 0b100) != 0,
+            (mask & 0b1000) != 0,
+        )
     }
 
     #[inline(always)]
@@ -110,7 +115,12 @@ impl Vector4 {
     /// (usually x), 2nd bit for element 2, etc.
     pub fn less(&self, rhs: &Self) -> (bool, bool, bool, bool) {
         let mask = unsafe { _mm_movemask_ps(_mm_cmp_ps(self.0, rhs.0, _CMP_LT_OQ)) };
-        ((mask & 0b1) != 0, (mask & 0b10) != 0, (mask & 0b100) != 0, (mask & 0b1000) != 0)
+        (
+            (mask & 0b1) != 0,
+            (mask & 0b10) != 0,
+            (mask & 0b100) != 0,
+            (mask & 0b1000) != 0,
+        )
     }
 }
 

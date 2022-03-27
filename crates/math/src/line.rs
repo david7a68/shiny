@@ -1,6 +1,8 @@
 use std::ops::Neg;
 
-use super::{constants::APPROX_EQUAL_THRESHOLD, x86::vector4::Vector4, Float4, Point};
+use super::{
+    constants::APPROX_EQUAL_THRESHOLD, float4::Float4, point::Point, x86::vector4::Vector4,
+};
 
 /// A line, held in normalized standard form.
 #[repr(transparent)]
@@ -25,7 +27,7 @@ impl Line {
     pub fn with_c(other: Line, c: f32) -> Self {
         let (a, b, ..) = other.parts.extract();
         Self {
-            parts: Vector4::from_tuple(a, b, c, 0.0)
+            parts: Vector4::from_tuple(a, b, c, 0.0),
         }
     }
 
@@ -98,7 +100,7 @@ impl Neg for Line {
     fn neg(self) -> Self::Output {
         let (a, b, c, _) = self.parts.extract();
         Line {
-            parts: Vector4::from_tuple(-a, -b, c, 0.0)
+            parts: Vector4::from_tuple(-a, -b, c, 0.0),
         }
     }
 }
