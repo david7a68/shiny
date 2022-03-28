@@ -33,13 +33,12 @@ impl<C: Color> CpuImage<C> {
         }
     }
 
-    // Clears the image to a single color. Placeholder until a proper renderer
-    // can be set up.
-    pub fn clear(&mut self, color: C) {
-        let pixels = self.pixels.pixels_mut();
-        for p in pixels {
-            *p = color;
-        }
+    pub fn get(&mut self, x: u32, y: u32) -> C {
+        self.pixels.get(x, y)
+    }
+
+    pub fn set(&mut self, x: u32, y: u32, color: C) {
+        self.pixels.set(x, y, color);
     }
 }
 
