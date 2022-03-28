@@ -8,9 +8,9 @@ use utils::{max, min};
 use super::{line::Line, point::Point, rect::Rect};
 
 pub struct QuadraticBezier {
-    p1: Point,
-    p2: Point,
-    p3: Point,
+    pub p1: Point,
+    pub p2: Point,
+    pub p3: Point,
 }
 
 impl QuadraticBezier {
@@ -29,10 +29,10 @@ impl QuadraticBezier {
 }
 
 pub struct CubicBezier {
-    p0: Point,
-    p1: Point,
-    p2: Point,
-    p3: Point,
+    pub p0: Point,
+    pub p1: Point,
+    pub p2: Point,
+    pub p3: Point,
 }
 
 impl CubicBezier {

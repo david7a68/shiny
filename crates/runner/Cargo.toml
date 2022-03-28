@@ -5,4 +5,5 @@ edition = "2021"
 
 [dependencies]
 image = { path = "../image" }
+math = { path = "../math" }
 storage = { path = "../storage" }

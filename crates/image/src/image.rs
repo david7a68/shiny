@@ -56,6 +56,14 @@ impl<C: Color> CpuImage<C> {
     pub fn raw_mut(&mut self) -> &mut PixelBuffer<C> {
         &mut self.pixels
     }
+
+    /// Clears the image, such that every pixel has `color`. This may cause a
+    /// clone of the image's storage if more than one handle exists.
+    pub fn clear(&mut self, color: C) {
+        for px in self.pixels.pixels_mut() {
+            *px = color;
+        }
+    }
 }
 
 impl<C: Color> Image<C> for CpuImage<C> {
