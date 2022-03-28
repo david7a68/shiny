@@ -33,12 +33,28 @@ impl<C: Color> CpuImage<C> {
         }
     }
 
+    /// Gets the color of a single pixel.
     pub fn get(&mut self, x: u32, y: u32) -> C {
         self.pixels.get(x, y)
     }
 
+    /// Sets the color of a single pixel. This may cause a clone of the image's
+    /// storage if more than one handle exists.
     pub fn set(&mut self, x: u32, y: u32, color: C) {
         self.pixels.set(x, y, color);
+    }
+
+    /// Borrows the image's handle to the buffer directly.
+    pub fn raw(&self) -> &PixelBuffer<C> {
+        &self.pixels
+    }
+
+    /// Borrows the image's handle to the buffer directly. Call this to make
+    /// changes to the image's pixels directly. Making changes on the
+    /// [`PixelBuffer`] returned by `get_pixels()` will cause the
+    /// [`PixelBuffer`] to be cloned.
+    pub fn raw_mut(&mut self) -> &mut PixelBuffer<C> {
+        &mut self.pixels
     }
 }
 

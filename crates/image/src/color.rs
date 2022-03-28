@@ -13,17 +13,25 @@ pub trait Color: Copy {
 
 pub trait RawColor: Color {}
 
-#[derive(Clone, Copy)]
-pub struct Rgb<Component: Copy> {
-    pub r: Component,
-    pub g: Component,
-    pub b: Component,
+pub trait Component: Copy {
+    const BIT_DEPTH: usize;
 }
 
-impl<Component: Copy> RawColor for Rgb<Component> {}
+impl Component for u8 {
+    const BIT_DEPTH: usize = 8;
+}
 
-impl<Component: Copy> Color for Rgb<Component> {
-    type Component = Component;
+#[derive(Clone, Copy)]
+pub struct Rgb<C: Component> {
+    pub r: C,
+    pub g: C,
+    pub b: C,
+}
+
+impl<C: Component> RawColor for Rgb<C> {}
+
+impl<C: Component> Color for Rgb<C> {
+    type Component = C;
     type Alpha = ();
 
     fn red(&self) -> Self::Component {
@@ -42,43 +50,40 @@ impl<Component: Copy> Color for Rgb<Component> {
 }
 
 #[derive(Clone, Copy)]
-pub struct Rgba<Component, Alpha>
-where
-    Component: Copy,
-    Alpha: Copy,
-{
-    pub r: Component,
-    pub g: Component,
-    pub b: Component,
-    pub a: Alpha,
+pub struct Rgba<C: Component, A: Component> {
+    pub r: C,
+    pub g: C,
+    pub b: C,
+    pub a: A,
 }
 
-impl<Component: Copy, Alpha: Copy> RawColor for Rgba<Component, Alpha> {}
+impl<C: Component, A: Component> RawColor for Rgba<C, A> {}
 
-impl<Component: Copy, Alpha: Copy> Color for Rgba<Component, Alpha> {
-    type Component = Component;
-    type Alpha = Alpha;
+impl<C: Component, A: Component> Color for Rgba<C, A> {
+    type Component = C;
+    type Alpha = A;
 
-    fn red(&self) -> Component {
+    fn red(&self) -> Self::Component {
         self.r
     }
 
-    fn green(&self) -> Component {
+    fn green(&self) -> Self::Component {
         self.g
     }
 
-    fn blue(&self) -> Component {
+    fn blue(&self) -> Self::Component {
         self.b
     }
 
-    fn alpha(&self) -> Alpha {
+    fn alpha(&self) -> Self::Alpha {
         self.a
     }
 }
 
 #[derive(Clone, Copy)]
+#[repr(transparent)]
 pub struct Standard<C: RawColor> {
-    color: C,
+    pub color: C,
 }
 
 impl<C: RawColor> Color for Standard<C> {
@@ -103,4 +108,4 @@ impl<C: RawColor> Color for Standard<C> {
 }
 
 pub type Srgb8 = Standard<Rgb<u8>>;
-pub type Srgba8 = Standard<Rgb<u8>>;
+pub type Srgba8 = Standard<Rgba<u8, u8>>;
