@@ -18,17 +18,17 @@ fn main() {
     });
 
     let curve = CubicBezier {
-        p0: Point(10.0, 10.0),
-        p1: Point(10.0, 150.0),
-        p2: Point(150.0, 10.0),
-        p3: Point(150.0, 150.0),
+        p0: Point(50.0, 10.0),
+        p1: Point(190.0, 190.0),
+        p2: Point(10.0, 190.0),
+        p3: Point(150.0, 10.0),
     };
 
     let color = Srgb8 {
         color: Rgb {
             r: 255u8,
-            g: 255u8,
-            b: 255u8,
+            g: 0,
+            b: 0,
         },
     };
 

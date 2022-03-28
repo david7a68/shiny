@@ -1,2 +1,13 @@
+[package]
+name = "shiny"
+version = "0.1.0"
+edition = "2021"
+
 [workspace]
 members = ["crates/*"]
+
+[dependencies]
+image = { path="crates/image" }
+math = { path="crates/math" }
+storage = { path="crates/storage" }
+utils = { path="crates/utils" }
