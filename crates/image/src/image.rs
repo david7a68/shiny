@@ -1,12 +1,14 @@
-use crate::{
-    color::{Color, ColorFormat},
-    pixelbuffer::PixelBuffer,
-};
+use crate::{color::Color, pixelbuffer::PixelBuffer};
 
+/// Represents a handle to an image with a given color space and pixel format.
+///
+/// e.g.:
+/// ```rust
+/// # use image::image::CpuImage;
+/// # use image::color::Srgb8;
+/// type SrgbCpuImage = CpuImage<Srgb8>;
+/// ```
 pub trait Image<C: Color> {
-    /// The format that individual pixels are stored with.
-    fn format(&self) -> ColorFormat;
-
     /// The width of the image.
     fn width(&self) -> u32;
 
@@ -42,10 +44,6 @@ impl<C: Color> CpuImage<C> {
 }
 
 impl<C: Color> Image<C> for CpuImage<C> {
-    fn format(&self) -> ColorFormat {
-        C::FORMAT
-    }
-
     fn width(&self) -> u32 {
         self.pixels.width()
     }
