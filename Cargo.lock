@@ -77,21 +77,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "shapes"
+version = "0.1.0"
+dependencies = [
+ "math",
+ "utils",
+]
+
+[[package]]
 name = "shiny"
 version = "0.1.0"
 dependencies = [
  "image",
  "math",
- "storage",
- "utils",
-]
-
-[[package]]
-name = "storage"
-version = "0.0.0"
-dependencies = [
- "image",
  "png",
+ "shapes",
+ "utils",
 ]
 
 [[package]]

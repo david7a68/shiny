@@ -6,7 +6,7 @@ use image::{
 };
 
 /// Encodes a [`PixelBuffer`] and write it into a [`Write`]r.
-pub fn export_png<C: PngColor>(pix: PixelBuffer<C>, out: &mut impl Write) {
+pub fn encode_png<C: PngColor>(pix: PixelBuffer<C>, out: &mut impl Write) {
     let mut encoder = png::Encoder::new(out, pix.width(), pix.height());
 
     C::encode_color_information(&mut encoder);

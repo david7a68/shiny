@@ -7,27 +7,6 @@ use utils::{max, min};
 
 use super::{line::Line, point::Point, rect::Rect};
 
-pub struct QuadraticBezier {
-    pub p1: Point,
-    pub p2: Point,
-    pub p3: Point,
-}
-
-impl QuadraticBezier {
-    pub fn elevate(&mut self) -> CubicBezier {
-        let part1 = self.p1.vec() * (1.0 / 3.0);
-        let part2 = self.p2.vec() * (2.0 / 3.0);
-        let part3 = self.p3.vec() * (1.0 / 3.0);
-
-        CubicBezier {
-            p0: self.p1,
-            p1: (part1 + part2).into(),
-            p2: (part2 + part3).into(),
-            p3: self.p3,
-        }
-    }
-}
-
 pub struct CubicBezier {
     pub p0: Point,
     pub p1: Point,

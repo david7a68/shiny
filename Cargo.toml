@@ -9,5 +9,8 @@ members = ["crates/*"]
 [dependencies]
 image = { path="crates/image" }
 math = { path="crates/math" }
-storage = { path="crates/storage" }
+shapes = { path="crates/shapes" }
 utils = { path="crates/utils" }
+
+[dev-dependencies]
+png = "0.17.5"

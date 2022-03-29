@@ -38,10 +38,15 @@ impl<C: Color> CpuImage<C> {
         self.pixels.get(x, y)
     }
 
-    /// Sets the color of a single pixel. This may cause a clone of the image's
-    /// storage if more than one handle exists.
+    /// Sets the color of a single pixel. Coordinates outside of the image's
+    /// bounds will be ignored.
+    /// 
+    /// Note: This may cause a clone of the image's storage if more than one
+    /// handle exists.
     pub fn set(&mut self, x: u32, y: u32, color: C) {
-        self.pixels.set(x, y, color);
+        if (x < self.pixels.width()) & (y < self.pixels.height()) {
+            self.pixels.set(x, y, color);
+        }
     }
 
     /// Borrows the image's handle to the buffer directly.
