@@ -94,9 +94,7 @@ impl Vector4 {
 
     #[inline(always)]
     pub fn neg(&self) -> Self {
-        unsafe {
-            Self(_mm_sub_ps(_mm_set1_ps(0.0), self.0))
-        }
+        unsafe { Self(_mm_sub_ps(_mm_set1_ps(0.0), self.0)) }
     }
 
     #[inline(always)]

@@ -3,8 +3,7 @@ mod common;
 use shiny::{
     color::{Rgb, Srgb8},
     image::image::{CpuImage, Image},
-    math::point::Point,
-    shapes::curve::Bezier,
+    math::{bezier::{CubicBezierSlice, Bezier}, point::Point},
 };
 
 use common::write_png;
@@ -25,7 +24,7 @@ fn main() {
         Point(10.0, 190.0),
         Point(150.0, 10.0),
     ];
-    let curve = Bezier::new(&points);
+    let curve = CubicBezierSlice::new(&points);
 
     let color = Srgb8 {
         color: Rgb { r: 255, g: 0, b: 0 },

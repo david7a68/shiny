@@ -3,11 +3,10 @@ mod common;
 use common::write_png;
 
 use shiny::{
-    color::{Color, Rgb, Srgb8},
+    color::{Rgb, Srgb8},
     image::image::{CpuImage, Image},
-    math::{point::Point},
-    shapes::curve::clipping::clip,
-    shapes::{curve::Bezier, path::PathBuilder},
+    math::point::Point,
+    shapes::path::PathBuilder,
 };
 
 fn main() {

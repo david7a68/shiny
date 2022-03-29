@@ -1,5 +1,4 @@
-use super::curve::Bezier;
-use crate::math::point::Point;
+use crate::math::{bezier::CubicBezierSlice, point::Point};
 
 pub struct Path {
     segments: Box<[PathSegment]>,
@@ -49,14 +48,14 @@ pub struct SegmentIterator<'a> {
 }
 
 impl<'a> Iterator for SegmentIterator<'a> {
-    type Item = Bezier<'a>;
+    type Item = CubicBezierSlice<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.cursor < self.segment_end {
             let slice = &self.path.points[self.cursor..self.cursor + 4];
             self.cursor += 3;
 
-            Some(Bezier::new(slice.try_into().unwrap()))
+            Some(CubicBezierSlice::new(slice.try_into().unwrap()))
         } else {
             None
         }
