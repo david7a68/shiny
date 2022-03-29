@@ -1,4 +1,3 @@
-#[macro_export]
 macro_rules! min {
     ($x: expr) => ($x);
     ($x: expr, $($z: expr),+) => {{
@@ -11,7 +10,6 @@ macro_rules! min {
     }}
 }
 
-#[macro_export]
 macro_rules! max {
     ($x: expr) => ($x);
     ($x: expr, $($z: expr),+) => {{
@@ -23,3 +21,6 @@ macro_rules! max {
         }
     }}
 }
+
+pub(crate) use max;
+pub(crate) use min;

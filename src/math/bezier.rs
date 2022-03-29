@@ -1,11 +1,11 @@
 use std::ops::RangeBounds;
 
 use super::{float4::Float4, float4x4::Float4x4};
-
-use utils::arrayvec::ArrayVec;
-use utils::{max, min};
-
 use super::{line::Line, point::Point, rect::Rect};
+use crate::utils::{
+    arrayvec::ArrayVec,
+    cmp::{max, min},
+};
 
 pub struct CubicBezier {
     pub p0: Point,

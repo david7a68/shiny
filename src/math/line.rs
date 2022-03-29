@@ -37,7 +37,7 @@ impl Line {
         } else {
             let delta = p2 - p1;
             let slope = delta.y() / delta.x();
-            let offset = p1.y() - slope * p1.x();
+            let offset = -(slope * p1.x()) + p1.y();
             Self::new(slope, -1.0, offset)
         }
     }
@@ -60,9 +60,9 @@ impl Line {
     }
 
     /// Calculates the position of a point at the given x-coordinate.
-    pub fn at_x(&self, x: f32) -> Option<Point> {
+    pub fn y_at(&self, x: f32) -> Option<Point> {
         if self.b() != 0.0 {
-            let y = (self.a() * x + self.c()) / -self.b();
+            let y = -(self.a() * x + self.c()) / self.b();
             Some(Point(x, y))
         } else {
             None
@@ -70,12 +70,12 @@ impl Line {
     }
 
     pub fn x_intercept(&self) -> f32 {
-        self.a() / self.c()
+        -self.c() / self.a()
     }
 
     /// Calculates the distance from `point` to the nearest point on the line.
     pub fn distance_to(&self, point: Point) -> f32 {
-        (self.a() * point.x() + self.b() * point.y() + self.c()).abs()
+        self.a() * point.x() + self.b() * point.y() + self.c()
     }
 
     pub fn approx_equal(&self, rhs: &Self) -> bool {
@@ -87,7 +87,7 @@ impl Line {
     /// Calculates a line parallel to the current line that passes through
     /// `point`.
     pub fn parallel_through(&self, point: Point) -> Self {
-        let c = -(self.a() * point.x()) - self.b() * point.y();
+        let c = -(self.a() * point.x()) - (self.b() * point.y());
         Line {
             parts: Vector4::from_tuple(self.a(), self.b(), c, 0.0),
         }
@@ -98,9 +98,8 @@ impl Neg for Line {
     type Output = Self;
 
     fn neg(self) -> Self::Output {
-        let (a, b, c, _) = self.parts.extract();
-        Line {
-            parts: Vector4::from_tuple(-a, -b, c, 0.0),
+        Self {
+            parts: self.parts.neg(),
         }
     }
 }
@@ -131,20 +130,20 @@ mod tests {
             // regular line
             let line = Line::between(Point(2.0, 2.0), Point(6.0, 4.0));
             assert!(line.approx_equal(&Line::new(0.4472136, -0.8944272, 0.8944272)));
-            assert_eq!(line.at_x(2.0).unwrap().y(), 2.0);
-            assert_eq!(line.at_x(6.0).unwrap().y(), 4.0);
+            assert_eq!(line.y_at(2.0).unwrap().y(), 2.0);
+            assert_eq!(line.y_at(6.0).unwrap().y(), 4.0);
         }
         {
             // vertical line
             let line = Line::between(Point(5.0, 1.0), Point(5.0, 12.0));
-            assert_eq!(line.at_x(1.0), None);
+            assert_eq!(line.y_at(1.0), None);
         }
         {
             // horizontal line
             let line = Line::between(Point(2.0, 2.0), Point(6.0, 2.0));
-            assert_eq!(line.at_x(2.0).unwrap().y(), 2.0);
-            assert_eq!(line.at_x(6.0).unwrap().y(), 2.0);
-            assert_eq!(line.at_x(100.0).unwrap().y(), 2.0);
+            assert_eq!(line.y_at(2.0).unwrap().y(), 2.0);
+            assert_eq!(line.y_at(6.0).unwrap().y(), 2.0);
+            assert_eq!(line.y_at(100.0).unwrap().y(), 2.0);
         }
     }
 

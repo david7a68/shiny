@@ -93,6 +93,13 @@ impl Vector4 {
     }
 
     #[inline(always)]
+    pub fn neg(&self) -> Self {
+        unsafe {
+            Self(_mm_sub_ps(_mm_set1_ps(0.0), self.0))
+        }
+    }
+
+    #[inline(always)]
     /// Sets each of the first 4 bits to true if equal. 1st bit for element 1
     /// (usually x), 2nd bit for element 2, etc.
     pub fn eq_mask(&self, b: Self) -> i32 {

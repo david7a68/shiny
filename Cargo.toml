@@ -3,14 +3,5 @@ name = "shiny"
 version = "0.1.0"
 edition = "2021"
 
-[workspace]
-members = ["crates/*"]
-
-[dependencies]
-image = { path="crates/image" }
-math = { path="crates/math" }
-shapes = { path="crates/shapes" }
-utils = { path="crates/utils" }
-
 [dev-dependencies]
 png = "0.17.5"

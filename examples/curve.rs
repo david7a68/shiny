@@ -1,13 +1,13 @@
 mod common;
 
-use common::write_png;
-
-use image::{
+use shiny::{
     color::{Rgb, Srgb8},
-    image::{CpuImage, Image},
+    image::image::{CpuImage, Image},
+    math::point::Point,
+    shapes::curve::Bezier,
 };
-use math::point::Point;
-use shapes::curve::Bezier;
+
+use common::write_png;
 
 fn main() {
     let mut image = CpuImage::new(200, 200);

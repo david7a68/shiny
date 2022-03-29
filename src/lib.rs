@@ -1,6 +1,8 @@
 //! Re-exports individual crates.
 
-pub use ::image;
-pub use math;
-pub use shapes;
-pub use utils;
+pub mod color;
+pub mod image;
+pub mod math;
+pub mod shapes;
+
+mod utils;

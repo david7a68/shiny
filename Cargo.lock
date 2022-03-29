@@ -45,17 +45,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "image"
-version = "0.0.0"
-
-[[package]]
-name = "math"
-version = "0.0.0"
-dependencies = [
- "utils",
-]
-
-[[package]]
 name = "miniz_oxide"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -77,24 +66,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "shapes"
-version = "0.1.0"
-dependencies = [
- "math",
- "utils",
-]
-
-[[package]]
 name = "shiny"
 version = "0.1.0"
 dependencies = [
- "image",
- "math",
  "png",
- "shapes",
- "utils",
 ]
-
-[[package]]
-name = "utils"
-version = "0.0.0"

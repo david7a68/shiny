@@ -1,5 +1,5 @@
-use crate::curve::Bezier;
-use math::point::Point;
+use super::curve::Bezier;
+use crate::math::point::Point;
 
 pub struct Path {
     segments: Box<[PathSegment]>,

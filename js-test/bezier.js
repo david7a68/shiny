@@ -178,6 +178,9 @@ class Bezier {
         let e2 = [2 / 3, line.distance_to(this.p2)];
         let e3 = [3 / 3, line.distance_to(this.p3)];
 
+        console.log("line ", line);
+        console.log("e0=", e0, "e1=", e1, "e2=", e2, "e3=", e3);
+
         if (e0[1] < 0 && e1[1] < 0 && e2[1] < 0 && e3[1] < 0) {
             return [0, 0];
         }
@@ -190,6 +193,8 @@ class Bezier {
             let x1 = l1.x_intercept();
             let x2 = l2.x_intercept();
             let x3 = l3.x_intercept();
+
+            console.log("low ", x1, " : ", x2, " : ", x3)
 
             var min = 1000;
             if (x1 > 0 && x1 < min) {
@@ -213,7 +218,7 @@ class Bezier {
             let x2 = l2.x_intercept();
             let x3 = l3.x_intercept();
             var max = 0;
-
+            console.log("high ", x1, " : ", x2, " : ", x3)
             if (x1 < 1 && x1 > max) {
                 max = x1;
             }
@@ -335,11 +340,11 @@ function step5_intersect(sample, canvas) {
 }
 
 let steps = [
-    [step1_original, "Original"],
-    [step2_thin_line, "Thin Line"],
-    [step3_thick_line, "Thick Line"],
+    // [step1_original, "Original"],
+    // [step2_thin_line, "Thin Line"],
+    // [step3_thick_line, "Thick Line"],
     [step4_clip, "Clip Bezier"],
-    [step5_intersect, "Find Intersections"]
+    // [step5_intersect, "Find Intersections"]
 ];
 
 function run() {

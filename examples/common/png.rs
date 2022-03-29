@@ -1,8 +1,8 @@
 use std::io::Write;
 
-use image::{
+use shiny::{
     color::{Color, Rgb, Rgba, Srgb8, Srgba8},
-    pixelbuffer::PixelBuffer,
+    image::pixelbuffer::PixelBuffer,
 };
 
 /// Encodes a [`PixelBuffer`] and write it into a [`Write`]r.

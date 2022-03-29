@@ -1,4 +1,5 @@
-use crate::{color::Color, pixelbuffer::PixelBuffer};
+use super::pixelbuffer::PixelBuffer;
+use crate::color::Color;
 
 /// Represents a handle to an image with a given color space and pixel format.
 ///
@@ -40,7 +41,7 @@ impl<C: Color> CpuImage<C> {
 
     /// Sets the color of a single pixel. Coordinates outside of the image's
     /// bounds will be ignored.
-    /// 
+    ///
     /// Note: This may cause a clone of the image's storage if more than one
     /// handle exists.
     pub fn set(&mut self, x: u32, y: u32, color: C) {
