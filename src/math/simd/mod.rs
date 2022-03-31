@@ -172,6 +172,14 @@ impl Mul for Float4 {
     }
 }
 
+impl Mul<Float4> for f32 {
+    type Output = Float4;
+
+    fn mul(self, rhs: Float4) -> Self::Output {
+        Float4::splat(self) * rhs
+    }
+}
+
 impl Div for Float4 {
     type Output = Self;
 

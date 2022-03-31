@@ -2,9 +2,6 @@ use std::ops::{Add, Mul, Sub};
 
 use super::{mat4x4::Mat4x4, simd::Float4};
 
-// #[cfg(target_arch = "x86_64")]
-// use super::x86::vector4::*;
-
 #[repr(transparent)]
 #[derive(Clone, Copy)]
 pub struct Vec4(pub(super) Float4);
@@ -54,41 +51,6 @@ impl Vec4 {
     pub fn zwxy(&self) -> Self {
         Self(self.0.cdab())
     }
-
-    #[inline(always)]
-    pub fn max(&self, rhs: &Self) -> Self {
-        Self(self.0.max(&rhs.0))
-    }
-
-    #[inline(always)]
-    pub fn min(&self, rhs: &Self) -> Self {
-        Self(self.0.min(&rhs.0))
-    }
-
-    #[inline(always)]
-    pub fn mul_elements(&self, rhs: &Self) -> Self {
-        Self(self.0 * rhs.0)
-    }
-
-    #[inline(always)]
-    pub fn div_elements(&self, rhs: &Self) -> Self {
-        Self(self.0 / rhs.0)
-    }
-
-    #[inline(always)]
-    pub fn sqrt_elements(&self) -> Self {
-        Self(self.0.sqrt())
-    }
-
-    #[inline(always)]
-    pub fn eq_elements(&self, rhs: &Self) -> (bool, bool, bool, bool) {
-        self.0.eq(&rhs.0)
-    }
-
-    #[inline(always)]
-    pub fn lt_elements(&self, rhs: &Self) -> (bool, bool, bool, bool) {
-        self.0.less_than(&rhs.0)
-    }
 }
 
 impl Add for Vec4 {
@@ -114,7 +76,7 @@ impl Mul<Vec4> for f32 {
 
     #[inline(always)]
     fn mul(self, rhs: Vec4) -> Self::Output {
-        rhs.mul_elements(&Vec4::splat(self))
+        Vec4(rhs.0 * Float4::splat(self))
     }
 }
 
@@ -127,7 +89,7 @@ impl Mul<Mat4x4> for Vec4 {
         let r1 = self.y() * *rhs.r1();
         let r2 = self.z() * *rhs.r2();
         let r3 = self.w() * *rhs.r3();
-        r0 + r1 + r2 + r3
+        Vec4(r0 + r1 + r2 + r3)
     }
 }
 
@@ -171,11 +133,12 @@ mod tests {
     #[test]
     fn float4_x_float4x4() {
         let v = Vec4::new(1.0, 2.0, 3.0, 4.0);
+        #[rustfmt::skip]
         let m = Mat4x4::new(
-            Vec4::new(5.0, 6.0, 7.0, 8.0),
-            Vec4::new(9.0, 10.0, 11.0, 12.0),
-            Vec4::new(13.0, 14.0, 15.0, 16.0),
-            Vec4::new(17.0, 18.0, 19.0, 20.0),
+            5.0, 6.0, 7.0, 8.0,
+            9.0, 10.0, 11.0, 12.0,
+            13.0, 14.0, 15.0, 16.0,
+            17.0, 18.0, 19.0, 20.0,
         );
 
         assert_eq!(v * m, Vec4::new(130.0, 140.0, 150.0, 160.0));
