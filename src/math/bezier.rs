@@ -1,5 +1,5 @@
 use super::interp::Interpolate;
-use super::{float4::Float4, float4x4::Float4x4};
+use super::{vec4::Vec4, mat4x4::Mat4x4};
 use super::{line::Line, point::Point, rect::Rect};
 use crate::utils::cmp::{max, min};
 
@@ -101,22 +101,22 @@ impl<'a> Bezier for CubicBezierSlice<'a> {
 fn evaluate(bezier: &[Point; 4], t: f32) -> Point {
     // let t_inv = 1.0 - t;
     // ((t_inv.powf(3.0) * self.p0.vec()) + (3.0 * t_inv.powf(2.0) * t * self.p1.vec()) + (3.0 * t_inv * t.powf(2.0) * self.p2.vec()) + (t.powf(3.0) * self.p3.vec())).into()
-    let t = Float4::new(1.0, t, t.powf(2.0), t.powf(3.0));
-    let m = Float4x4::new(
-        Float4::new(1.0, 0.0, 0.0, 0.0),
-        Float4::new(-3.0, 3.0, 0.0, 0.0),
-        Float4::new(3.0, -6.0, 3.0, 0.0),
-        Float4::new(-1.0, 3.0, -3.0, 1.0),
+    let t = Vec4::new(1.0, t, t.powf(2.0), t.powf(3.0));
+    let m = Mat4x4::new(
+        Vec4::new(1.0, 0.0, 0.0, 0.0),
+        Vec4::new(-3.0, 3.0, 0.0, 0.0),
+        Vec4::new(3.0, -6.0, 3.0, 0.0),
+        Vec4::new(-1.0, 3.0, -3.0, 1.0),
     );
 
-    let px = Float4::new(bezier[0].x(), bezier[1].x(), bezier[2].x(), bezier[3].x());
-    let py = Float4::new(bezier[0].y(), bezier[1].y(), bezier[2].y(), bezier[3].y());
+    let px = Vec4::new(bezier[0].x(), bezier[1].x(), bezier[2].x(), bezier[3].x());
+    let py = Vec4::new(bezier[0].y(), bezier[1].y(), bezier[2].y(), bezier[3].y());
 
     let tm = t * m;
     let tmx = tm.mul_elements(&px);
     let tmy = tm.mul_elements(&py);
 
-    let (x, y) = Float4::hsum2(tmx, tmy);
+    let (x, y) = Vec4::hsum2(tmx, tmy);
     Point(x, y)
 }
 
@@ -133,8 +133,8 @@ fn coarse_bounds(bezier: &[Point; 4]) -> Rect {
     //     bottom: y_max
     // }
 
-    let a = Float4::new(bezier[0].x(), bezier[0].y(), bezier[1].x(), bezier[1].y());
-    let b = Float4::new(bezier[2].x(), bezier[2].y(), bezier[3].x(), bezier[3].y());
+    let a = Vec4::new(bezier[0].x(), bezier[0].y(), bezier[1].x(), bezier[1].y());
+    let b = Vec4::new(bezier[2].x(), bezier[2].y(), bezier[3].x(), bezier[3].y());
 
     let min1 = a.min(&b);
     let min2 = min1.zwxy();

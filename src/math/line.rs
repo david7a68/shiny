@@ -1,7 +1,7 @@
 use std::ops::Neg;
 
 use super::{
-    constants::APPROX_EQUAL_THRESHOLD, float4::Float4, point::Point, x86::vector4::Vector4,
+    constants::APPROX_EQUAL_THRESHOLD, vec4::Vec4, point::Point, x86::vector4::Vector4,
 };
 
 /// A line, held in normalized standard form.
@@ -43,7 +43,7 @@ impl Line {
     }
 
     /// Creates a new line in standard form from a normalized vector.
-    pub unsafe fn from_normalized_vector(vector: Float4) -> Self {
+    pub unsafe fn from_normalized_vector(vector: Vec4) -> Self {
         Self { parts: vector.0 }
     }
 

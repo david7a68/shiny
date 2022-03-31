@@ -1,6 +1,6 @@
 use std::ops::Sub;
 
-use super::float2::Float2;
+use super::vec2::Vec2;
 
 /// A point in 2D space.
 #[derive(Clone, Copy, Debug, Default, PartialEq, PartialOrd)]
@@ -15,20 +15,20 @@ impl Point {
         self.1
     }
 
-    pub fn vec(self) -> Float2 {
-        Float2::new(self.0, self.1)
+    pub fn vec(self) -> Vec2 {
+        Vec2::new(self.0, self.1)
     }
 }
 
 impl Sub<Point> for Point {
-    type Output = Float2;
+    type Output = Vec2;
     fn sub(self, rhs: Point) -> Self::Output {
-        Float2::new(self.0 - rhs.0, self.1 - rhs.1)
+        Vec2::new(self.0 - rhs.0, self.1 - rhs.1)
     }
 }
 
-impl From<Float2> for Point {
-    fn from(v: Float2) -> Self {
+impl From<Vec2> for Point {
+    fn from(v: Vec2) -> Self {
         Self(v.x(), v.y())
     }
 }

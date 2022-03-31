@@ -3,9 +3,9 @@ use std::ops::{Add, Div, Mul, Sub};
 /// A vector in 2D space.
 #[derive(Clone, Copy, Default, PartialEq)]
 #[allow(non_camel_case_types)]
-pub struct Float2(f32, f32);
+pub struct Vec2(f32, f32);
 
-impl Float2 {
+impl Vec2 {
     pub fn new(x: f32, y: f32) -> Self {
         Self(x, y)
     }
@@ -37,43 +37,43 @@ impl Float2 {
     }
 }
 
-impl Mul<Float2> for f32 {
-    type Output = Float2;
-    fn mul(self, rhs: Float2) -> Self::Output {
+impl Mul<Vec2> for f32 {
+    type Output = Vec2;
+    fn mul(self, rhs: Vec2) -> Self::Output {
         rhs.mul(self)
     }
 }
 
-impl Mul<f32> for Float2 {
-    type Output = Float2;
+impl Mul<f32> for Vec2 {
+    type Output = Vec2;
 
     fn mul(self, rhs: f32) -> Self::Output {
-        Float2(self.0 * rhs, self.1 * rhs)
+        Vec2(self.0 * rhs, self.1 * rhs)
     }
 }
 
-impl Div<f32> for Float2 {
-    type Output = Float2;
+impl Div<f32> for Vec2 {
+    type Output = Vec2;
     fn div(self, rhs: f32) -> Self::Output {
-        Float2(self.0 / rhs, self.1 / rhs)
+        Vec2(self.0 / rhs, self.1 / rhs)
     }
 }
 
-impl Add<Float2> for Float2 {
-    type Output = Float2;
-    fn add(self, rhs: Float2) -> Self::Output {
-        Float2(self.0 + rhs.0, self.1 + rhs.1)
+impl Add<Vec2> for Vec2 {
+    type Output = Vec2;
+    fn add(self, rhs: Vec2) -> Self::Output {
+        Vec2(self.0 + rhs.0, self.1 + rhs.1)
     }
 }
 
-impl Sub<Float2> for Float2 {
-    type Output = Float2;
-    fn sub(self, rhs: Float2) -> Self::Output {
-        Float2(self.0 - rhs.0, self.1 - rhs.1)
+impl Sub<Vec2> for Vec2 {
+    type Output = Vec2;
+    fn sub(self, rhs: Vec2) -> Self::Output {
+        Vec2(self.0 - rhs.0, self.1 - rhs.1)
     }
 }
 
-impl std::fmt::Debug for Float2 {
+impl std::fmt::Debug for Vec2 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("vec2")
             .field("x", &self.x())

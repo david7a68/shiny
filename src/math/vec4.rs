@@ -1,15 +1,15 @@
 use std::ops::{Add, Mul, Sub};
 
-use super::float4x4::Float4x4;
+use super::mat4x4::Mat4x4;
 
 #[cfg(target_arch = "x86_64")]
 use super::x86::vector4::*;
 
 #[repr(transparent)]
 #[derive(Clone, Copy)]
-pub struct Float4(pub(super) Vector4);
+pub struct Vec4(pub(super) Vector4);
 
-impl Float4 {
+impl Vec4 {
     #[inline(always)]
     pub fn new(x: f32, y: f32, z: f32, w: f32) -> Self {
         Self(Vector4::from_tuple(x, y, z, w))
@@ -21,7 +21,7 @@ impl Float4 {
     }
 
     #[inline(always)]
-    pub fn hsum2(a: Float4, b: Float4) -> (f32, f32) {
+    pub fn hsum2(a: Vec4, b: Vec4) -> (f32, f32) {
         Vector4::hsum2(a.0, b.0)
     }
 
@@ -96,7 +96,7 @@ impl Float4 {
     }
 }
 
-impl Add for Float4 {
+impl Add for Vec4 {
     type Output = Self;
 
     #[inline(always)]
@@ -105,7 +105,7 @@ impl Add for Float4 {
     }
 }
 
-impl Sub for Float4 {
+impl Sub for Vec4 {
     type Output = Self;
 
     #[inline(always)]
@@ -114,20 +114,20 @@ impl Sub for Float4 {
     }
 }
 
-impl Mul<Float4> for f32 {
-    type Output = Float4;
+impl Mul<Vec4> for f32 {
+    type Output = Vec4;
 
     #[inline(always)]
-    fn mul(self, rhs: Float4) -> Self::Output {
-        rhs.mul_elements(&Float4::splat(self))
+    fn mul(self, rhs: Vec4) -> Self::Output {
+        rhs.mul_elements(&Vec4::splat(self))
     }
 }
 
-impl Mul<Float4x4> for Float4 {
-    type Output = Float4;
+impl Mul<Mat4x4> for Vec4 {
+    type Output = Vec4;
 
     #[inline(always)]
-    fn mul(self, rhs: Float4x4) -> Self::Output {
+    fn mul(self, rhs: Mat4x4) -> Self::Output {
         let r0 = self.x() * *rhs.r0();
         let r1 = self.y() * *rhs.r1();
         let r2 = self.z() * *rhs.r2();
@@ -136,14 +136,14 @@ impl Mul<Float4x4> for Float4 {
     }
 }
 
-impl PartialEq for Float4 {
+impl PartialEq for Vec4 {
     #[inline(always)]
     fn eq(&self, other: &Self) -> bool {
         self.0.eq_mask(other.0) == 0b1111
     }
 }
 
-impl PartialEq<(f32, f32, f32, f32)> for Float4 {
+impl PartialEq<(f32, f32, f32, f32)> for Vec4 {
     #[inline(always)]
     fn eq(&self, other: &(f32, f32, f32, f32)) -> bool {
         self.0
@@ -152,7 +152,7 @@ impl PartialEq<(f32, f32, f32, f32)> for Float4 {
     }
 }
 
-impl std::fmt::Debug for Float4 {
+impl std::fmt::Debug for Vec4 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Float4")
             .field("x", &self.x())
@@ -169,7 +169,7 @@ mod tests {
 
     #[test]
     fn extract() {
-        let v = Float4::new(1.0, 2.0, 3.0, 4.0);
+        let v = Vec4::new(1.0, 2.0, 3.0, 4.0);
         assert_eq!(v, (1.0, 2.0, 3.0, 4.0));
     }
 
@@ -177,21 +177,21 @@ mod tests {
     fn swizzle() {
         {
             // zwxy
-            let v = Float4::new(1.0, 2.0, 3.0, 4.0);
-            assert_eq!(v.zwxy(), Float4::new(3.0, 4.0, 1.0, 2.0));
+            let v = Vec4::new(1.0, 2.0, 3.0, 4.0);
+            assert_eq!(v.zwxy(), Vec4::new(3.0, 4.0, 1.0, 2.0));
         }
     }
 
     #[test]
     fn float4_x_float4x4() {
-        let v = Float4::new(1.0, 2.0, 3.0, 4.0);
-        let m = Float4x4::new(
-            Float4::new(5.0, 6.0, 7.0, 8.0),
-            Float4::new(9.0, 10.0, 11.0, 12.0),
-            Float4::new(13.0, 14.0, 15.0, 16.0),
-            Float4::new(17.0, 18.0, 19.0, 20.0),
+        let v = Vec4::new(1.0, 2.0, 3.0, 4.0);
+        let m = Mat4x4::new(
+            Vec4::new(5.0, 6.0, 7.0, 8.0),
+            Vec4::new(9.0, 10.0, 11.0, 12.0),
+            Vec4::new(13.0, 14.0, 15.0, 16.0),
+            Vec4::new(17.0, 18.0, 19.0, 20.0),
         );
 
-        assert_eq!(v * m, Float4::new(130.0, 140.0, 150.0, 160.0));
+        assert_eq!(v * m, Vec4::new(130.0, 140.0, 150.0, 160.0));
     }
 }
