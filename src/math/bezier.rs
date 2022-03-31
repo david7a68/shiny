@@ -116,7 +116,7 @@ fn evaluate(bezier: &[Point; 4], t: f32) -> Point {
     let tmx = tm.mul_elements(&px);
     let tmy = tm.mul_elements(&py);
 
-    let (x, y) = Vec4::hsum2(tmx, tmy);
+    let (x, y) = Vec4::horizontal_sum2(tmx, tmy);
     Point(x, y)
 }
 
@@ -176,8 +176,8 @@ pub fn clip(curve: &[Point; 4], against: &[Point; 4]) -> (f32, f32) {
         let thin = Line::between(against[0], against[3]);
         let line1 = thin.parallel_through(against[1]);
         let line2 = thin.parallel_through(against[2]);
-        let min_c = min!(thin.c(), line1.c(), line2.c());
-        let max_c = max!(thin.c(), line1.c(), line2.c());
+        let min_c = min!(thin.c, line1.c, line2.c);
+        let max_c = max!(thin.c, line1.c, line2.c);
         (-Line::with_c(thin, min_c), Line::with_c(thin, max_c))
     };
 
@@ -193,10 +193,10 @@ pub fn clip(curve: &[Point; 4], against: &[Point; 4]) -> (f32, f32) {
 /// This algorithm does not attempt to calculate the precise point of
 /// intersection, but only a close-enough approximation.
 pub fn clip_line(curve: &[Point; 4], line: &Line) -> (f32, f32) {
-    let e0 = Point(0.0 / 3.0, line.distance_to(curve[0]));
-    let e1 = Point(1.0 / 3.0, line.distance_to(curve[1]));
-    let e2 = Point(2.0 / 3.0, line.distance_to(curve[2]));
-    let e3 = Point(3.0 / 3.0, line.distance_to(curve[3]));
+    let e0 = Point(0.0 / 3.0, line.signed_distance_to(curve[0]));
+    let e1 = Point(1.0 / 3.0, line.signed_distance_to(curve[1]));
+    let e2 = Point(2.0 / 3.0, line.signed_distance_to(curve[2]));
+    let e3 = Point(3.0 / 3.0, line.signed_distance_to(curve[3]));
 
     // Test the left of the curve (low-t)
     let low = if e0.y() < 0.0 {

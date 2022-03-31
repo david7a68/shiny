@@ -1,14 +1,13 @@
 use std::ops::Neg;
 
-use super::{
-    constants::APPROX_EQUAL_THRESHOLD, vec4::Vec4, point::Point, x86::vector4::Vector4,
-};
+use super::{cmp::approx_eq, point::Point};
 
 /// A line, held in normalized standard form.
-#[repr(transparent)]
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 pub struct Line {
-    parts: Vector4,
+    pub a: f32,
+    pub b: f32,
+    pub c: f32,
 }
 
 impl Line {
@@ -16,18 +15,20 @@ impl Line {
     /// representation.
     pub fn new(a: f32, b: f32, c: f32) -> Self {
         // normalize
-        let v = Vector4::from_tuple(a, b, c, 0.0);
         let div = (a * a + b * b).sqrt();
 
         Self {
-            parts: v.div(Vector4::splat(div)),
+            a: a / div,
+            b: b / div,
+            c: c / div,
         }
     }
 
     pub fn with_c(other: Line, c: f32) -> Self {
-        let (a, b, ..) = other.parts.extract();
         Self {
-            parts: Vector4::from_tuple(a, b, c, 0.0),
+            a: other.a,
+            b: other.b,
+            c,
         }
     }
 
@@ -42,27 +43,10 @@ impl Line {
         }
     }
 
-    /// Creates a new line in standard form from a normalized vector.
-    pub unsafe fn from_normalized_vector(vector: Vec4) -> Self {
-        Self { parts: vector.0 }
-    }
-
-    pub fn a(&self) -> f32 {
-        self.parts.extract().0
-    }
-
-    pub fn b(&self) -> f32 {
-        self.parts.extract().1
-    }
-
-    pub fn c(&self) -> f32 {
-        self.parts.extract().2
-    }
-
     /// Calculates the position of a point at the given x-coordinate.
     pub fn y_at(&self, x: f32) -> Option<Point> {
-        if self.b() != 0.0 {
-            let y = -(self.a() * x + self.c()) / self.b();
+        if self.b != 0.0 {
+            let y = -(self.a * x + self.c) / self.b;
             Some(Point(x, y))
         } else {
             None
@@ -70,26 +54,28 @@ impl Line {
     }
 
     pub fn x_intercept(&self) -> f32 {
-        -self.c() / self.a()
+        -self.c / self.a
     }
 
-    /// Calculates the distance from `point` to the nearest point on the line.
-    pub fn distance_to(&self, point: Point) -> f32 {
-        self.a() * point.x() + self.b() * point.y() + self.c()
+    /// Calculates the signed distance from `point` to the nearest point on the
+    /// line, where a negative result is on the same side as the origin and a
+    /// positive result is on the opposite side from the origin.
+    pub fn signed_distance_to(&self, point: Point) -> f32 {
+        -(self.a * point.x() + self.b * point.y() + self.c)
     }
 
-    pub fn approx_equal(&self, rhs: &Self) -> bool {
-        let diff = self.parts.sub(rhs.parts).abs();
-        let limit = Vector4::splat(APPROX_EQUAL_THRESHOLD);
-        diff.less(&limit) == (true, true, true, true)
+    pub fn approx_eq(&self, rhs: &Self) -> bool {
+        approx_eq(self.a, rhs.a) & approx_eq(self.b, rhs.b) & approx_eq(self.c, rhs.c)
     }
 
     /// Calculates a line parallel to the current line that passes through
     /// `point`.
     pub fn parallel_through(&self, point: Point) -> Self {
-        let c = -(self.a() * point.x()) - (self.b() * point.y());
-        Line {
-            parts: Vector4::from_tuple(self.a(), self.b(), c, 0.0),
+        let c = -(self.a * point.x()) - (self.b * point.y());
+        Self {
+            a: self.a,
+            b: self.b,
+            c,
         }
     }
 }
@@ -99,23 +85,19 @@ impl Neg for Line {
 
     fn neg(self) -> Self::Output {
         Self {
-            parts: self.parts.neg(),
+            a: -self.a,
+            b: -self.b,
+            c: -self.c,
         }
-    }
-}
-
-impl PartialEq for Line {
-    fn eq(&self, other: &Self) -> bool {
-        self.parts.eq(other.parts) == (true, true, true, false)
     }
 }
 
 impl std::fmt::Debug for Line {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Line")
-            .field("a", &self.a())
-            .field("b", &self.b())
-            .field("c", &self.c())
+            .field("a", &self.a)
+            .field("b", &self.b)
+            .field("c", &self.c)
             .finish()
     }
 }
@@ -127,11 +109,23 @@ mod tests {
     #[test]
     fn between_points() {
         {
-            // regular line
+            // line with positive slope
             let line = Line::between(Point(2.0, 2.0), Point(6.0, 4.0));
-            assert!(line.approx_equal(&Line::new(0.4472136, -0.8944272, 0.8944272)));
-            assert_eq!(line.y_at(2.0).unwrap().y(), 2.0);
-            assert_eq!(line.y_at(6.0).unwrap().y(), 4.0);
+            assert!(line.approx_eq(&Line::new(0.4472136, -0.8944272, 0.8944272)));
+            assert!(approx_eq(2.0, line.y_at(2.0).unwrap().y()));
+            assert!(approx_eq(2.5, line.y_at(3.0).unwrap().y()));
+            assert!(approx_eq(3.0, line.y_at(4.0).unwrap().y()));
+            assert!(approx_eq(3.5, line.y_at(5.0).unwrap().y()));
+            assert!(approx_eq(4.0, line.y_at(6.0).unwrap().y()));
+        }
+        {
+            // line with negative slope
+            let line = Line::between(Point(2.0, 4.0), Point(6.0, 2.0));
+            assert!(approx_eq(4.0, line.y_at(2.0).unwrap().y()));
+            assert!(approx_eq(3.5, line.y_at(3.0).unwrap().y()));
+            assert!(approx_eq(3.0, line.y_at(4.0).unwrap().y()));
+            assert!(approx_eq(2.5, line.y_at(5.0).unwrap().y()));
+            assert!(approx_eq(2.0, line.y_at(6.0).unwrap().y()));
         }
         {
             // vertical line
@@ -150,7 +144,16 @@ mod tests {
     #[test]
     fn distance() {
         let line = Line::between(Point(2.0, 2.0), Point(6.0, 4.0));
-        assert_eq!(line.distance_to(Point(2.0, 2.0)), 0.0);
-        assert_eq!(line.distance_to(Point(2.0, 3.0)), 0.89442706);
+        assert_eq!(line.signed_distance_to(Point(2.0, 2.0)), 0.0);
+        // point on same side as the origin
+        assert!(approx_eq(
+            -0.89442706,
+            line.signed_distance_to(Point(2.0, 1.0))
+        ));
+        // point on opposite side of the origin
+        assert!(approx_eq(
+            0.89442706,
+            line.signed_distance_to(Point(2.0, 3.0))
+        ));
     }
 }

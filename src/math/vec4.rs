@@ -1,83 +1,78 @@
 use std::ops::{Add, Mul, Sub};
 
-use super::mat4x4::Mat4x4;
+use super::{mat4x4::Mat4x4, simd::Float4};
 
-#[cfg(target_arch = "x86_64")]
-use super::x86::vector4::*;
+// #[cfg(target_arch = "x86_64")]
+// use super::x86::vector4::*;
 
 #[repr(transparent)]
 #[derive(Clone, Copy)]
-pub struct Vec4(pub(super) Vector4);
+pub struct Vec4(pub(super) Float4);
 
 impl Vec4 {
     #[inline(always)]
     pub fn new(x: f32, y: f32, z: f32, w: f32) -> Self {
-        Self(Vector4::from_tuple(x, y, z, w))
+        Self(Float4::new(x, y, z, w))
     }
 
     #[inline(always)]
     pub fn splat(value: f32) -> Self {
-        Self(Vector4::splat(value))
+        Self(Float4::splat(value))
     }
 
     #[inline(always)]
-    pub fn hsum2(a: Vec4, b: Vec4) -> (f32, f32) {
-        Vector4::hsum2(a.0, b.0)
+    pub fn horizontal_sum2(a: Vec4, b: Vec4) -> (f32, f32) {
+        Float4::horizontal_sum2(a.0, b.0)
     }
 
     #[inline(always)]
     pub fn unpack(&self) -> (f32, f32, f32, f32) {
-        self.0.extract()
+        self.0.unpack()
     }
 
     #[inline(always)]
     pub fn x(&self) -> f32 {
-        self.0.extract().0
+        self.0.unpack().0
     }
 
     #[inline(always)]
     pub fn y(&self) -> f32 {
-        self.0.extract().1
+        self.0.unpack().1
     }
 
     #[inline(always)]
     pub fn z(&self) -> f32 {
-        self.0.extract().2
+        self.0.unpack().2
     }
 
     #[inline(always)]
     pub fn w(&self) -> f32 {
-        self.0.extract().3
+        self.0.unpack().3
     }
 
     #[inline(always)]
     pub fn zwxy(&self) -> Self {
-        Self(self.0.zwxy())
-    }
-
-    #[inline(always)]
-    pub fn yxwz(&self) -> Self {
-        Self(self.0.yxwz())
+        Self(self.0.cdab())
     }
 
     #[inline(always)]
     pub fn max(&self, rhs: &Self) -> Self {
-        Self(self.0.max(rhs.0))
+        Self(self.0.max(&rhs.0))
     }
 
     #[inline(always)]
     pub fn min(&self, rhs: &Self) -> Self {
-        Self(self.0.min(rhs.0))
+        Self(self.0.min(&rhs.0))
     }
 
     #[inline(always)]
     pub fn mul_elements(&self, rhs: &Self) -> Self {
-        Self(self.0.mul(rhs.0))
+        Self(self.0 * rhs.0)
     }
 
     #[inline(always)]
     pub fn div_elements(&self, rhs: &Self) -> Self {
-        Self(self.0.div(rhs.0))
+        Self(self.0 / rhs.0)
     }
 
     #[inline(always)]
@@ -87,12 +82,12 @@ impl Vec4 {
 
     #[inline(always)]
     pub fn eq_elements(&self, rhs: &Self) -> (bool, bool, bool, bool) {
-        self.0.eq(rhs.0)
+        self.0.eq(&rhs.0)
     }
 
     #[inline(always)]
     pub fn lt_elements(&self, rhs: &Self) -> (bool, bool, bool, bool) {
-        self.0.less(&rhs.0)
+        self.0.less_than(&rhs.0)
     }
 }
 
@@ -139,16 +134,7 @@ impl Mul<Mat4x4> for Vec4 {
 impl PartialEq for Vec4 {
     #[inline(always)]
     fn eq(&self, other: &Self) -> bool {
-        self.0.eq_mask(other.0) == 0b1111
-    }
-}
-
-impl PartialEq<(f32, f32, f32, f32)> for Vec4 {
-    #[inline(always)]
-    fn eq(&self, other: &(f32, f32, f32, f32)) -> bool {
-        self.0
-            .eq_mask(Vector4::from_tuple(other.0, other.1, other.2, other.3))
-            == 0b1111
+        self.0 == other.0
     }
 }
 
@@ -168,9 +154,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn extract() {
+    fn unpack() {
         let v = Vec4::new(1.0, 2.0, 3.0, 4.0);
-        assert_eq!(v, (1.0, 2.0, 3.0, 4.0));
+        assert_eq!(v.unpack(), (1.0, 2.0, 3.0, 4.0));
     }
 
     #[test]

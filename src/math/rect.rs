@@ -1,44 +1,42 @@
 use std::fmt::Debug;
 
-#[cfg(target_arch = "x86_64")]
-// use super::x86::rect::Rect as RectImpl;
-use super::x86::vector4::Vector4;
+use super::simd::Float4;
 
 #[derive(Clone, Copy)]
 #[repr(transparent)]
-pub struct Rect(Vector4);
+pub struct Rect(Float4);
 
 impl Rect {
     pub fn new(left: f32, right: f32, top: f32, bottom: f32) -> Self {
-        Self(Vector4::from_tuple(left, right, top, bottom))
+        Self(Float4::new(left, right, top, bottom))
     }
 
     pub fn left(&self) -> f32 {
-        self.0.extract().0
+        self.0.a()
     }
 
     pub fn right(&self) -> f32 {
-        self.0.extract().1
+        self.0.b()
     }
 
     pub fn top(&self) -> f32 {
-        self.0.extract().2
+        self.0.c()
     }
 
     pub fn bottom(&self) -> f32 {
-        self.0.extract().3
+        self.0.d()
     }
 
     pub fn intersects_with(&self, rhs: &Rect) -> bool {
-        let a = Vector4::from_tuple(self.left(), self.top(), rhs.left(), rhs.top());
-        let b = Vector4::from_tuple(rhs.right(), rhs.bottom(), self.right(), self.bottom());
+        let a = Float4::new(self.left(), self.top(), rhs.left(), rhs.top());
+        let b = Float4::new(rhs.right(), rhs.bottom(), self.right(), self.bottom());
         a.less_or_equal(&b) == (true, true, true, true)
     }
 }
 
 impl PartialEq for Rect {
     fn eq(&self, other: &Self) -> bool {
-        self.0.eq(other.0) == (true, true, true, true)
+        self.0 == other.0
     }
 }
 
@@ -112,11 +110,6 @@ mod tests {
             // line intersection
             let horizontal = Rect::new(10.0, 20.0, 10.0, 10.0);
             let vertical = Rect::new(15.0, 15.0, 10.0, 20.0);
-
-            println!("{:?}", horizontal);
-            println!("{:?}", vertical);
-            println!("{:?}", horizontal.intersects_with(&vertical));
-            println!("{:?}", vertical.intersects_with(&horizontal));
 
             assert!(horizontal.intersects_with(&vertical));
             assert!(vertical.intersects_with(&horizontal));

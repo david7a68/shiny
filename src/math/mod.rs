@@ -1,11 +1,10 @@
 pub mod bezier;
-pub mod constants;
-pub mod vec2;
-pub mod vec4;
-pub mod mat4x4;
+pub mod cmp;
 pub mod interp;
 pub mod line;
+pub mod mat4x4;
 pub mod point;
 pub mod rect;
-
-mod x86;
+pub mod simd;
+pub mod vec2;
+pub mod vec4;
