@@ -3,7 +3,7 @@ mod common;
 use shiny::{
     color::{Rgb, Srgb8},
     image::{cpu_image::CpuImage, Image},
-    math::{
+    shapes::{
         bezier::{Bezier, CubicBezierSlice},
         point::Point,
     },

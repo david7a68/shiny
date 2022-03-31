@@ -1,4 +1,4 @@
-use crate::math::{bezier::CubicBezierSlice, point::Point};
+use super::{bezier::CubicBezierSlice, point::Point};
 
 pub struct Path {
     segments: Box<[PathSegment]>,

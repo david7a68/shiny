@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use super::simd::Float4;
+use crate::math::simd::Float4;
 
 #[derive(Clone, Copy)]
 #[repr(transparent)]

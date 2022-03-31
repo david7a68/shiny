@@ -1,8 +1,12 @@
-use super::interp::Interpolate;
-use super::simd::Float4;
+// use super::interp::Interpolate;
+// use super::simd::Float4;
+// use super::{line::Line, point::Point, rect::Rect};
+// use super::{mat4x4::Mat4x4, vec4::Vec4};
 use super::{line::Line, point::Point, rect::Rect};
-use super::{mat4x4::Mat4x4, vec4::Vec4};
-use crate::utils::cmp::{max, min};
+use crate::{
+    math::{interp::Interpolate, mat4x4::Mat4x4, simd::Float4, vec4::Vec4},
+    utils::cmp::{max, min},
+};
 
 pub trait Bezier: Sized {
     type Owning;

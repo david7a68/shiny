@@ -4,7 +4,7 @@ use super::{mat4x4::Mat4x4, simd::Float4};
 
 #[repr(transparent)]
 #[derive(Clone, Copy)]
-pub struct Vec4(pub(super) Float4);
+pub struct Vec4(pub Float4);
 
 impl Vec4 {
     #[inline(always)]

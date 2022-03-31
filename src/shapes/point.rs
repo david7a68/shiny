@@ -1,6 +1,6 @@
 use std::ops::Sub;
 
-use super::vec2::Vec2;
+use crate::math::{interp::Interpolate, vec2::Vec2};
 
 /// A point in 2D space.
 #[derive(Clone, Copy, Debug, Default, PartialEq, PartialOrd)]
@@ -30,5 +30,11 @@ impl Sub<Point> for Point {
 impl From<Vec2> for Point {
     fn from(v: Vec2) -> Self {
         Self(v.x(), v.y())
+    }
+}
+
+impl Interpolate for Point {
+    fn lerp(&self, t: f32, rhs: &Self) -> Self {
+        Self(self.0.lerp(t, &rhs.0), self.1.lerp(t, &rhs.1))
     }
 }

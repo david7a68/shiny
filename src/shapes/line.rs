@@ -1,6 +1,7 @@
 use std::ops::Neg;
 
-use super::{cmp::approx_eq, point::Point};
+use super::point::Point;
+use crate::math::cmp::approx_eq;
 
 /// A line, held in normalized standard form.
 #[derive(Clone, Copy, PartialEq)]

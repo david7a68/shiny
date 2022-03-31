@@ -5,8 +5,7 @@ use common::write_png;
 use shiny::{
     color::{Rgb, Srgb8},
     image::{cpu_image::CpuImage, Image},
-    math::{bezier::Bezier, point::Point},
-    shapes::path::PathBuilder,
+    shapes::{bezier::Bezier, path::PathBuilder, point::Point},
 };
 
 fn main() {
