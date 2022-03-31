@@ -1,6 +1,6 @@
 use super::interp::Interpolate;
-use super::{vec4::Vec4, mat4x4::Mat4x4};
 use super::{line::Line, point::Point, rect::Rect};
+use super::{mat4x4::Mat4x4, vec4::Vec4};
 use crate::utils::cmp::{max, min};
 
 pub trait Bezier: Sized {
@@ -77,7 +77,7 @@ impl<'a> Bezier for CubicBezierSlice<'a> {
     }
 
     fn coarse_bounds(&self) -> Rect {
-        coarse_bounds(&self.points)
+        coarse_bounds(self.points)
     }
 
     fn split(&self, t: f32) -> (Self::Owning, Self::Owning) {
@@ -193,10 +193,10 @@ pub fn clip(curve: &[Point; 4], against: &[Point; 4]) -> (f32, f32) {
 /// This algorithm does not attempt to calculate the precise point of
 /// intersection, but only a close-enough approximation.
 pub fn clip_line(curve: &[Point; 4], line: &Line) -> (f32, f32) {
-    let e0 = Point(0.0 / 3.0, line.signed_distance_to(curve[0]));
+    let e0 = Point(0.0, line.signed_distance_to(curve[0]));
     let e1 = Point(1.0 / 3.0, line.signed_distance_to(curve[1]));
     let e2 = Point(2.0 / 3.0, line.signed_distance_to(curve[2]));
-    let e3 = Point(3.0 / 3.0, line.signed_distance_to(curve[3]));
+    let e3 = Point(1.0, line.signed_distance_to(curve[3]));
 
     // Test the left of the curve (low-t)
     let low = if e0.y() < 0.0 {

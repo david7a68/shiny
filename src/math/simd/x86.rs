@@ -1,7 +1,7 @@
 use std::arch::x86_64::{
     __m128, _mm_add_ps, _mm_andnot_ps, _mm_castsi128_ps, _mm_cmpeq_ps, _mm_cmple_ps, _mm_cmplt_ps,
-    _mm_div_ps, _mm_min_ps, _mm_movemask_ps, _mm_mul_ps, _mm_set1_epi32, _mm_set1_ps, _mm_set_ps,
-    _mm_shuffle_ps, _mm_sqrt_ps, _mm_sub_ps, _mm_max_ps,
+    _mm_div_ps, _mm_max_ps, _mm_min_ps, _mm_movemask_ps, _mm_mul_ps, _mm_set1_epi32, _mm_set1_ps,
+    _mm_set_ps, _mm_shuffle_ps, _mm_sqrt_ps, _mm_sub_ps,
 };
 
 pub type Float4 = __m128;

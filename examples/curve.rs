@@ -2,8 +2,11 @@ mod common;
 
 use shiny::{
     color::{Rgb, Srgb8},
-    image::image::{CpuImage, Image},
-    math::{bezier::{CubicBezierSlice, Bezier}, point::Point},
+    image::{cpu_image::CpuImage, Image},
+    math::{
+        bezier::{Bezier, CubicBezierSlice},
+        point::Point,
+    },
 };
 
 use common::write_png;

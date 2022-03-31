@@ -2,7 +2,7 @@ use std::io::Write;
 
 use shiny::{
     color::{Color, Rgb, Rgba, Srgb8, Srgba8},
-    image::pixelbuffer::PixelBuffer,
+    image::pixel_buffer::PixelBuffer,
 };
 
 /// Encodes a [`PixelBuffer`] and write it into a [`Write`]r.
