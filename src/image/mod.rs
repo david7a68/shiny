@@ -14,11 +14,14 @@ use pixel_buffer::PixelBuffer;
 /// ```
 pub trait Image<C: Color> {
     /// The width of the image.
+    #[must_use]
     fn width(&self) -> u32;
 
     /// The height of the image.
+    #[must_use]
     fn height(&self) -> u32;
 
     /// Retrieves a copy-on-write handle to the image's pixels.
+    #[must_use]
     fn get_pixels(&self) -> PixelBuffer<C>;
 }

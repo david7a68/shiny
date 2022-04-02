@@ -7,26 +7,33 @@ use crate::math::simd::Float4;
 pub struct Rect(Float4);
 
 impl Rect {
+    #[inline]
+    #[must_use]
     pub fn new(left: f32, right: f32, top: f32, bottom: f32) -> Self {
         Self(Float4::new(left, right, top, bottom))
     }
 
+    #[must_use]
     pub fn left(&self) -> f32 {
         self.0.a()
     }
 
+    #[must_use]
     pub fn right(&self) -> f32 {
         self.0.b()
     }
 
+    #[must_use]
     pub fn top(&self) -> f32 {
         self.0.c()
     }
 
+    #[must_use]
     pub fn bottom(&self) -> f32 {
         self.0.d()
     }
 
+    #[must_use]
     pub fn intersects_with(&self, rhs: &Rect) -> bool {
         let a = Float4::new(self.left(), self.top(), rhs.left(), rhs.top());
         let b = Float4::new(rhs.right(), rhs.bottom(), self.right(), self.bottom());

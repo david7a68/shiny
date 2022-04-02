@@ -4,7 +4,7 @@ use shiny::{
     color::{Rgb, Srgb8},
     image::{cpu_image::CpuImage, Image},
     shapes::{
-        bezier::{Bezier, CubicBezierSlice},
+        bezier::{Bezier, CubicSlice},
         point::Point,
     },
 };
@@ -22,12 +22,12 @@ fn main() {
     });
 
     let points = [
-        Point(50.0, 10.0),
-        Point(190.0, 190.0),
-        Point(10.0, 190.0),
-        Point(150.0, 10.0),
+        Point::new(50.0, 10.0),
+        Point::new(190.0, 190.0),
+        Point::new(10.0, 190.0),
+        Point::new(150.0, 10.0),
     ];
-    let curve = CubicBezierSlice::new(&points);
+    let curve = CubicSlice::new(&points);
 
     let color = Srgb8 {
         color: Rgb { r: 255, g: 0, b: 0 },
@@ -41,7 +41,7 @@ fn main() {
         }
 
         let p = curve.at(t);
-        image.set(p.x().round() as u32, p.y().round() as u32, color);
+        image.set(p.x.round() as u32, p.y.round() as u32, color);
 
         t += delta;
     }

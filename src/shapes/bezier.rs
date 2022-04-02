@@ -1,47 +1,55 @@
-// use super::interp::Interpolate;
-// use super::simd::Float4;
-// use super::{line::Line, point::Point, rect::Rect};
-// use super::{mat4x4::Mat4x4, vec4::Vec4};
 use super::{line::Line, point::Point, rect::Rect};
 use crate::{
-    math::{interp::Interpolate, mat4x4::Mat4x4, simd::Float4, vec4::Vec4},
+    math::{
+        interp::Interpolate,
+        matrix::{Mat1x4, Mat2x4, Mat4x4},
+        simd::Float4,
+    },
     utils::cmp::{max, min},
 };
 
 pub trait Bezier: Sized {
     type Owning;
 
+    #[must_use]
     fn at(&self, t: f32) -> Point;
 
+    #[must_use]
     fn coarse_bounds(&self) -> Rect;
 
+    #[must_use]
     fn split(&self, t: f32) -> (Self::Owning, Self::Owning);
 
+    #[must_use]
     fn split2(&self, t1: f32, t3: f32) -> (Self::Owning, Self::Owning, Self::Owning);
 }
 
 /// A cubic bezier curve.
-pub struct CubicBezier {
+pub struct Cubic {
     pub points: [Point; 4],
 }
 
-impl CubicBezier {
-    pub fn as_ref(&self) -> CubicBezierSlice {
-        CubicBezierSlice::new(&self.points)
+impl Cubic {
+    #[must_use]
+    pub fn as_ref(&self) -> CubicSlice {
+        CubicSlice::new(&self.points)
     }
 }
 
-impl Bezier for CubicBezier {
+impl Bezier for Cubic {
     type Owning = Self;
 
+    #[inline]
     fn at(&self, t: f32) -> Point {
         evaluate(&self.points, t)
     }
 
+    #[inline]
     fn coarse_bounds(&self) -> Rect {
         coarse_bounds(&self.points)
     }
 
+    #[inline]
     fn split(&self, t: f32) -> (Self::Owning, Self::Owning) {
         let (left, right) = split(&self.points, t);
         (
@@ -50,6 +58,7 @@ impl Bezier for CubicBezier {
         )
     }
 
+    #[inline]
     fn split2(&self, t1: f32, t2: f32) -> (Self::Owning, Self::Owning, Self::Owning) {
         let (left, center, right) = split2(&self.points, t1, t2);
         (
@@ -64,27 +73,31 @@ impl Bezier for CubicBezier {
 /// composites of several curves, where the first and last point can be shared
 /// with the curves before and after, respectively. This can significantly
 /// reduce the number of points that need to be stored.
-pub struct CubicBezierSlice<'a> {
+pub struct CubicSlice<'a> {
     pub points: &'a [Point; 4],
 }
 
-impl<'a> CubicBezierSlice<'a> {
+impl<'a> CubicSlice<'a> {
+    #[must_use]
     pub fn new(points: &'a [Point; 4]) -> Self {
         Self { points }
     }
 }
 
-impl<'a> Bezier for CubicBezierSlice<'a> {
-    type Owning = CubicBezier;
+impl<'a> Bezier for CubicSlice<'a> {
+    type Owning = Cubic;
 
+    #[inline]
     fn at(&self, t: f32) -> Point {
         evaluate(self.points, t)
     }
 
+    #[inline]
     fn coarse_bounds(&self) -> Rect {
         coarse_bounds(self.points)
     }
 
+    #[inline]
     fn split(&self, t: f32) -> (Self::Owning, Self::Owning) {
         let (left, right) = split(self.points, t);
         (
@@ -93,6 +106,7 @@ impl<'a> Bezier for CubicBezierSlice<'a> {
         )
     }
 
+    #[inline]
     fn split2(&self, t1: f32, t2: f32) -> (Self::Owning, Self::Owning, Self::Owning) {
         let (left, center, right) = split2(self.points, t1, t2);
         (
@@ -103,10 +117,11 @@ impl<'a> Bezier for CubicBezierSlice<'a> {
     }
 }
 
+#[must_use]
 fn evaluate(bezier: &[Point; 4], t: f32) -> Point {
     // let t_inv = 1.0 - t;
     // ((t_inv.powf(3.0) * self.p0.vec()) + (3.0 * t_inv.powf(2.0) * t * self.p1.vec()) + (3.0 * t_inv * t.powf(2.0) * self.p2.vec()) + (t.powf(3.0) * self.p3.vec())).into()
-    let t = Vec4::new(1.0, t, t.powf(2.0), t.powf(3.0));
+    let t = Mat1x4::new(1.0, t, t.powf(2.0), t.powf(3.0));
     #[rustfmt::skip]
     let m = Mat4x4::new(
         1.0, 0.0, 0.0, 0.0,
@@ -115,17 +130,22 @@ fn evaluate(bezier: &[Point; 4], t: f32) -> Point {
         -1.0, 3.0, -3.0, 1.0,
     );
 
-    let px = Float4::new(bezier[0].x(), bezier[1].x(), bezier[2].x(), bezier[3].x());
-    let py = Float4::new(bezier[0].y(), bezier[1].y(), bezier[2].y(), bezier[3].y());
+    let p = Mat2x4::new(
+        bezier[0].x,
+        bezier[0].y,
+        bezier[1].x,
+        bezier[1].y,
+        bezier[2].x,
+        bezier[2].y,
+        bezier[3].x,
+        bezier[3].y,
+    );
 
-    let tm = t * m;
-    let tmx = tm.0 * px;
-    let tmy = tm.0 * py;
-
-    let (x, y) = Float4::horizontal_sum2(tmx, tmy);
-    Point(x, y)
+    let tmp = t * m * p;
+    Point::new(tmp.x(), tmp.y())
 }
 
+#[must_use]
 fn coarse_bounds(bezier: &[Point; 4]) -> Rect {
     // let x_min = self.p0.x().min(self.p1.x()).min(self.p2.x().min(self.p2.x()));
     // let x_max = self.p0.x().max(self.p1.x()).max(self.p2.x().max(self.p2.x()));
@@ -139,8 +159,8 @@ fn coarse_bounds(bezier: &[Point; 4]) -> Rect {
     //     bottom: y_max
     // }
 
-    let a = Float4::new(bezier[0].x(), bezier[0].y(), bezier[1].x(), bezier[1].y());
-    let b = Float4::new(bezier[2].x(), bezier[2].y(), bezier[3].x(), bezier[3].y());
+    let a = Float4::new(bezier[0].x, bezier[0].y, bezier[1].x, bezier[1].y);
+    let b = Float4::new(bezier[2].x, bezier[2].y, bezier[3].x, bezier[3].y);
 
     let min1 = a.min(&b);
     let min2 = min1.cdab();
@@ -153,6 +173,7 @@ fn coarse_bounds(bezier: &[Point; 4]) -> Rect {
     Rect::new(min3.a(), max3.a(), min3.b(), max3.b())
 }
 
+#[must_use]
 fn split(bezier: &[Point; 4], t: f32) -> ([Point; 4], [Point; 4]) {
     let mid_01 = bezier[0].lerp(t, &bezier[1]);
     let mid_12 = bezier[1].lerp(t, &bezier[2]);
@@ -169,6 +190,7 @@ fn split(bezier: &[Point; 4], t: f32) -> ([Point; 4], [Point; 4]) {
     (a, b)
 }
 
+#[must_use]
 fn split2(bezier: &[Point; 4], t1: f32, t2: f32) -> ([Point; 4], [Point; 4], [Point; 4]) {
     let (left, rest) = split(bezier, t1);
     let (mid, right) = split(&rest, (t2 - t1) / (1.0 - t1));
@@ -177,6 +199,7 @@ fn split2(bezier: &[Point; 4], t1: f32, t2: f32) -> ([Point; 4], [Point; 4], [Po
 
 /// Clips `a` against `b`, producing t-bounds where `a` lies within `b`'s fat
 /// line.
+#[must_use]
 pub fn clip(curve: &[Point; 4], against: &[Point; 4]) -> (f32, f32) {
     let (min_line, max_line) = {
         let thin = Line::between(against[0], against[3]);
@@ -198,14 +221,15 @@ pub fn clip(curve: &[Point; 4], against: &[Point; 4]) -> (f32, f32) {
 ///
 /// This algorithm does not attempt to calculate the precise point of
 /// intersection, but only a close-enough approximation.
+#[must_use]
 pub fn clip_line(curve: &[Point; 4], line: &Line) -> (f32, f32) {
-    let e0 = Point(0.0, line.signed_distance_to(curve[0]));
-    let e1 = Point(1.0 / 3.0, line.signed_distance_to(curve[1]));
-    let e2 = Point(2.0 / 3.0, line.signed_distance_to(curve[2]));
-    let e3 = Point(1.0, line.signed_distance_to(curve[3]));
+    let e0 = Point::new(0.0, line.signed_distance_to(curve[0]));
+    let e1 = Point::new(1.0 / 3.0, line.signed_distance_to(curve[1]));
+    let e2 = Point::new(2.0 / 3.0, line.signed_distance_to(curve[2]));
+    let e3 = Point::new(1.0, line.signed_distance_to(curve[3]));
 
     // Test the left of the curve (low-t)
-    let low = if e0.y() < 0.0 {
+    let low = if e0.y < 0.0 {
         let x1 = Line::between(e0, e1).x_intercept();
         let x2 = Line::between(e0, e2).x_intercept();
         let x3 = Line::between(e0, e3).x_intercept();
@@ -218,7 +242,7 @@ pub fn clip_line(curve: &[Point; 4], line: &Line) -> (f32, f32) {
             min = x2;
         }
         if x3 > 0.0 && x3 < min {
-            min = x3
+            min = x3;
         }
         min
     } else {
@@ -226,7 +250,7 @@ pub fn clip_line(curve: &[Point; 4], line: &Line) -> (f32, f32) {
     };
 
     // Test the right of the curve (high-t)
-    let high = if e3.y() < 0.0 {
+    let high = if e3.y < 0.0 {
         let x1 = Line::between(e3, e0).x_intercept();
         let x2 = Line::between(e3, e1).x_intercept();
         let x3 = Line::between(e3, e2).x_intercept();
@@ -239,7 +263,7 @@ pub fn clip_line(curve: &[Point; 4], line: &Line) -> (f32, f32) {
             max = x2;
         }
         if x3 < 1.0 && x3 > max {
-            max = x3
+            max = x3;
         }
         max
     } else {
@@ -255,28 +279,28 @@ mod tests {
 
     #[test]
     fn evaluate() {
-        let bezier = CubicBezier {
+        let bezier = Cubic {
             points: [
-                Point(10.0, 5.0),
-                Point(3.0, 11.0),
-                Point(12.0, 20.0),
-                Point(6.0, 15.0),
+                Point::new(10.0, 5.0),
+                Point::new(3.0, 11.0),
+                Point::new(12.0, 20.0),
+                Point::new(6.0, 15.0),
             ],
         };
 
-        assert_eq!(bezier.at(0.0), Point(10.0, 5.0));
-        assert_eq!(bezier.at(0.5), Point(7.625, 14.125));
-        assert_eq!(bezier.at(1.0), Point(6.0, 15.0));
+        assert_eq!(bezier.at(0.0), Point::new(10.0, 5.0));
+        assert_eq!(bezier.at(0.5), Point::new(7.625, 14.125));
+        assert_eq!(bezier.at(1.0), Point::new(6.0, 15.0));
     }
 
     #[test]
     fn coarse_bounds() {
-        let bezier = CubicBezier {
+        let bezier = Cubic {
             points: [
-                Point(10.0, 5.0),
-                Point(3.0, 11.0),
-                Point(12.0, 20.0),
-                Point(6.0, 15.0),
+                Point::new(10.0, 5.0),
+                Point::new(3.0, 11.0),
+                Point::new(12.0, 20.0),
+                Point::new(6.0, 15.0),
             ],
         };
 
@@ -287,20 +311,20 @@ mod tests {
 
     #[test]
     fn clip_bezier() {
-        let curve1 = CubicBezier {
+        let curve1 = Cubic {
             points: [
-                Point(24.0, 21.0),
-                Point(189.0, 40.0),
-                Point(159.0, 137.0),
-                Point(101.0, 261.0),
+                Point::new(24.0, 21.0),
+                Point::new(189.0, 40.0),
+                Point::new(159.0, 137.0),
+                Point::new(101.0, 261.0),
             ],
         };
-        let curve2 = CubicBezier {
+        let curve2 = Cubic {
             points: [
-                Point(18.0, 122.0),
-                Point(15.0, 178.0),
-                Point(247.0, 173.0),
-                Point(251.0, 242.0),
+                Point::new(18.0, 122.0),
+                Point::new(15.0, 178.0),
+                Point::new(247.0, 173.0),
+                Point::new(251.0, 242.0),
             ],
         };
 

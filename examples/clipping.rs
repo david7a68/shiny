@@ -5,7 +5,7 @@ use common::write_png;
 use shiny::{
     color::{Rgb, Srgb8},
     image::{cpu_image::CpuImage, Image},
-    shapes::{path::PathBuilder, point::Point},
+    shapes::{path::Builder, point::Point},
 };
 
 fn main() {
@@ -15,15 +15,15 @@ fn main() {
     });
 
     let path1 = {
-        let mut builder = PathBuilder::new(Point(24.0, 21.0));
-        builder.add_cubic(Point(189.0, 40.0), Point(159.0, 137.0), Point(101.0, 261.0));
+        let mut builder = Builder::new(Point::new(24.0, 21.0));
+        builder.add_cubic(Point::new(189.0, 40.0), Point::new(159.0, 137.0), Point::new(101.0, 261.0));
         builder.build()
     };
     let curve1 = path1.iter().next().unwrap().next().unwrap();
 
     let path2 = {
-        let mut builder = PathBuilder::new(Point(18.0, 122.0));
-        builder.add_cubic(Point(15.0, 178.0), Point(247.0, 173.0), Point(251.0, 242.0));
+        let mut builder = Builder::new(Point::new(18.0, 122.0));
+        builder.add_cubic(Point::new(15.0, 178.0), Point::new(247.0, 173.0), Point::new(251.0, 242.0));
         builder.build()
     };
     let curve2 = path2.iter().next().unwrap().next().unwrap();

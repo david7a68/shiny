@@ -1,4 +1,4 @@
-use super::{bezier::CubicBezierSlice, point::Point};
+use super::{bezier::CubicSlice, point::Point};
 
 pub struct Path {
     segments: Box<[PathSegment]>,
@@ -7,6 +7,7 @@ pub struct Path {
 
 impl Path {
     /// Returns an iterator over each subpath in this (possibly) compound path.
+    #[must_use]
     pub fn iter(&self) -> SubPathIterator {
         SubPathIterator {
             path: self,
@@ -48,14 +49,14 @@ pub struct SegmentIterator<'a> {
 }
 
 impl<'a> Iterator for SegmentIterator<'a> {
-    type Item = CubicBezierSlice<'a>;
+    type Item = CubicSlice<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.cursor < self.segment_end {
             let slice = &self.path.points[self.cursor..self.cursor + 4];
             self.cursor += 3;
 
-            Some(CubicBezierSlice::new(slice.try_into().unwrap()))
+            Some(CubicSlice::new(slice.try_into().unwrap()))
         } else {
             None
         }
@@ -68,13 +69,14 @@ struct PathSegment {
     last: usize,
 }
 
-pub struct PathBuilder {
+pub struct Builder {
     segments: Vec<PathSegment>,
     points: Vec<Point>,
     path_start_offset: usize,
 }
 
-impl PathBuilder {
+impl Builder {
+    #[must_use]
     pub fn new(start: Point) -> Self {
         Self {
             segments: vec![],
@@ -101,6 +103,7 @@ impl PathBuilder {
         self.points.push(p3);
     }
 
+    #[must_use]
     pub fn build(mut self) -> Path {
         self.segments.push(PathSegment {
             first: self.path_start_offset,

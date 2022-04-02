@@ -88,13 +88,19 @@ pub fn less_or_equal(lhs: Float4, rhs: Float4) -> (bool, bool, bool, bool) {
 
 /// Computes the horizontal sum of two 4-float vectors simultaneously in order
 /// to improve register usage.
-pub fn horizontal_sum2(a: Float4, b: Float4) -> (f32, f32) {
+pub fn horizontal_sum2(v1: Float4, v2: Float4) -> (f32, f32) {
+    // initial: [a b c d][e f g h]
     unsafe {
-        let x = _mm_shuffle_ps(a, b, _MM_SHUFFLE(3, 2, 3, 2));
-        let y = _mm_shuffle_ps(a, b, _MM_SHUFFLE(1, 0, 1, 0));
-        let z = _mm_add_ps(x, y);
-        let w = _mm_shuffle_ps(z, z, _MM_SHUFFLE(2, 3, 0, 1));
-        let r: (f32, f32, f32, f32) = unpack(_mm_add_ps(z, w));
+        // [a b e f]
+        let hi_12 = _mm_shuffle_ps(v1, v2, _MM_SHUFFLE(3, 2, 3, 2));
+        // [c d g h]
+        let lo_12 = _mm_shuffle_ps(v1, v2, _MM_SHUFFLE(1, 0, 1, 0));
+        // [a+c b+d e+g f+h]
+        let sum_hi_lo_12 = _mm_add_ps(hi_12, lo_12);
+        // [b+d a+c f+h e+g]
+        let rotated = _mm_shuffle_ps(sum_hi_lo_12, sum_hi_lo_12, _MM_SHUFFLE(2, 3, 0, 1));
+        // [a+b+c+d a+b+c+d e+f+g+h e+f+g+h]
+        let r: (f32, f32, f32, f32) = unpack(_mm_add_ps(sum_hi_lo_12, rotated));
         (r.0, r.2)
     }
 }
@@ -106,4 +112,44 @@ fn bitmask_to_bool4(mask: i32) -> (bool, bool, bool, bool) {
         (mask & 0b100) != 0,
         (mask & 0b1000) != 0,
     )
+}
+
+pub fn horizontal_sum4(v1: Float4, v2: Float4, v3: Float4, v4: Float4) -> Float4 {
+    // initial: [a b c d][e f g h][i j k l][m n o p]
+    unsafe {
+        // [a b e f]
+        let hi_12 = _mm_shuffle_ps(v1, v2, _MM_SHUFFLE(3, 2, 3, 2));
+        // [c d g h]
+        let lo_12 = _mm_shuffle_ps(v1, v2, _MM_SHUFFLE(1, 0, 1, 0));
+        // [a+c b+d e+g f+h]
+        let sum_hi_lo_12 = _mm_add_ps(hi_12, lo_12);
+
+        // [i j m n]
+        let hi_34 = _mm_shuffle_ps(v3, v4, _MM_SHUFFLE(3, 2, 3, 2));
+        // [k l o p]
+        let lo_34 = _mm_shuffle_ps(v3, v4, _MM_SHUFFLE(1, 0, 1, 0));
+        // [i+k j+l m+o n+p]
+        let sum_hi_lo_34 = _mm_add_ps(hi_34, lo_34);
+
+        // [a+c e+g i+k m+o]
+        let hi_1234 = _mm_shuffle_ps(sum_hi_lo_12, sum_hi_lo_34, _MM_SHUFFLE(3, 1, 3, 1));
+        // [b+d f+h j+l n+p]
+        let lo_1234 = _mm_shuffle_ps(sum_hi_lo_12, sum_hi_lo_34, _MM_SHUFFLE(2, 0, 2, 0));
+        // [a+b+c+d e+f+g+h i+j+k+l m+n+o+p]
+        _mm_add_ps(hi_1234, lo_1234)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn f() {
+        let a = pack(1.0, 2.0, 3.0, 4.0);
+        let b = pack(5.0, 6.0, 7.0, 8.0);
+        let c = pack(9.0, 10.0, 11.0, 12.0);
+        let d = pack(13.0, 14.0, 15.0, 16.0);
+        println!("{:?}", unpack(horizontal_sum4(a, b, c, d)));
+    }
 }

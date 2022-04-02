@@ -2,6 +2,9 @@ pub trait Color: Copy {
     type Component;
     type Alpha;
 
+    const BLACK: Self;
+    const WHITE: Self;
+
     fn red(&self) -> Self::Component;
 
     fn green(&self) -> Self::Component;
@@ -11,13 +14,17 @@ pub trait Color: Copy {
     fn alpha(&self) -> Self::Alpha;
 }
 
-pub trait RawColor: Color {}
+pub trait Raw: Color {}
 
 pub trait Component: Copy {
+    const MAX: Self;
+    const ZERO: Self;
     const BIT_DEPTH: usize;
 }
 
 impl Component for u8 {
+    const MAX: Self = u8::MAX;
+    const ZERO: Self = 0;
     const BIT_DEPTH: usize = 8;
 }
 
@@ -28,11 +35,23 @@ pub struct Rgb<C: Component> {
     pub b: C,
 }
 
-impl<C: Component> RawColor for Rgb<C> {}
+impl<C: Component> Raw for Rgb<C> {}
 
 impl<C: Component> Color for Rgb<C> {
     type Component = C;
     type Alpha = ();
+
+    const BLACK: Self = Self {
+        r: C::ZERO,
+        g: C::ZERO,
+        b: C::ZERO,
+    };
+
+    const WHITE: Self = Self {
+        r: C::MAX,
+        g: C::MAX,
+        b: C::MAX,
+    };
 
     fn red(&self) -> Self::Component {
         self.r
@@ -57,11 +76,25 @@ pub struct Rgba<C: Component, A: Component> {
     pub a: A,
 }
 
-impl<C: Component, A: Component> RawColor for Rgba<C, A> {}
+impl<C: Component, A: Component> Raw for Rgba<C, A> {}
 
 impl<C: Component, A: Component> Color for Rgba<C, A> {
     type Component = C;
     type Alpha = A;
+
+    const BLACK: Self = Self {
+        r: C::ZERO,
+        g: C::ZERO,
+        b: C::ZERO,
+        a: A::ZERO,
+    };
+
+    const WHITE: Self = Self {
+        r: C::MAX,
+        g: C::MAX,
+        b: C::MAX,
+        a: A::MAX,
+    };
 
     fn red(&self) -> Self::Component {
         self.r
@@ -82,13 +115,21 @@ impl<C: Component, A: Component> Color for Rgba<C, A> {
 
 #[derive(Clone, Copy)]
 #[repr(transparent)]
-pub struct Standard<C: RawColor> {
+pub struct Standard<C: Raw> {
     pub color: C,
 }
 
-impl<C: RawColor> Color for Standard<C> {
+impl<C: Raw> Color for Standard<C> {
     type Component = C::Component;
     type Alpha = C::Alpha;
+
+    const BLACK: Self = Self {
+        color: C::BLACK,
+    };
+
+    const WHITE: Self = Self {
+        color: C::WHITE,
+    };
 
     fn red(&self) -> Self::Component {
         self.color.red()

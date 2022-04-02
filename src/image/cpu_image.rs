@@ -10,6 +10,7 @@ pub struct CpuImage<C: Color> {
 }
 
 impl<C: Color> CpuImage<C> {
+    #[must_use]
     pub fn new(width: u32, height: u32) -> Self {
         Self {
             pixels: PixelBuffer::new(width, height),
@@ -17,6 +18,7 @@ impl<C: Color> CpuImage<C> {
     }
 
     /// Gets the color of a single pixel.
+    #[must_use]
     pub fn get(&mut self, x: u32, y: u32) -> C {
         self.pixels.get(x, y)
     }
@@ -33,6 +35,7 @@ impl<C: Color> CpuImage<C> {
     }
 
     /// Borrows the image's handle to the buffer directly.
+    #[must_use]
     pub fn raw(&self) -> &PixelBuffer<C> {
         &self.pixels
     }
@@ -41,6 +44,7 @@ impl<C: Color> CpuImage<C> {
     /// changes to the image's pixels directly. Making changes on the
     /// [`PixelBuffer`] returned by `get_pixels()` will cause the
     /// [`PixelBuffer`] to be cloned.
+    #[must_use]
     pub fn raw_mut(&mut self) -> &mut PixelBuffer<C> {
         &mut self.pixels
     }

@@ -1,3 +1,5 @@
+#![allow(clippy::inline_always)]
+
 use std::{
     fmt::Debug,
     ops::{Add, Div, Mul, Neg, Sub},
@@ -13,36 +15,58 @@ pub struct Float4(arch::Float4);
 
 impl Float4 {
     /// Creates a new 4-float vector.
+    #[must_use]
+    #[inline(always)]
     pub fn new(a: f32, b: f32, c: f32, d: f32) -> Self {
         Self(arch::pack(a, b, c, d))
     }
 
     /// Repeats the value `v` in every element of the vector.
+    #[must_use]
+    #[inline(always)]
     pub fn splat(v: f32) -> Self {
         Self(arch::splat(v))
     }
 
     /// Computes the horizontal sum of 2 4-float vectors at the same time.
+    #[must_use]
+    #[inline(always)]
     pub fn horizontal_sum2(a: Float4, b: Float4) -> (f32, f32) {
         arch::horizontal_sum2(a.0, b.0)
     }
 
+    #[must_use]
+    #[inline(always)]
+    pub fn horizontal_sum4(a: Self, b: Self, c: Self, d: Self) -> Self {
+        Self(arch::horizontal_sum4(a.0, b.0, c.0, d.0))
+    }
+
+    #[must_use]
+    #[inline(always)]
     pub fn a(&self) -> f32 {
         self.unpack().0
     }
 
+    #[must_use]
+    #[inline(always)]
     pub fn b(&self) -> f32 {
         self.unpack().1
     }
 
+    #[must_use]
+    #[inline(always)]
     pub fn c(&self) -> f32 {
         self.unpack().2
     }
 
+    #[must_use]
+    #[inline(always)]
     pub fn d(&self) -> f32 {
         self.unpack().3
     }
 
+    #[must_use]
+    #[inline(always)]
     pub fn unpack(&self) -> (f32, f32, f32, f32) {
         arch::unpack(self.0)
     }
@@ -50,6 +74,8 @@ impl Float4 {
     /// Computes the absolute value of each element in the vector.This is
     /// semantically equivalent to performing each operation separately, but may
     /// make use of SIMD instructions to improve performance.
+    #[must_use]
+    #[inline(always)]
     pub fn abs(&self) -> Self {
         Self(arch::abs(self.0))
     }
@@ -57,6 +83,8 @@ impl Float4 {
     /// Computes the square root of each element in the vector.This is
     /// semantically equivalent to performing each operation separately, but may
     /// make use of SIMD instructions to improve performance.
+    #[must_use]
+    #[inline(always)]
     pub fn sqrt(&self) -> Self {
         Self(arch::sqrt(self.0))
     }
@@ -67,6 +95,8 @@ impl Float4 {
     /// let v = Float4::new(1.0, 2.0, 3.0, 4.0);
     /// assert_eq!(v.reverse().unpack(), (4.0, 3.0, 2.0, 1.0));
     /// ```
+    #[must_use]
+    #[inline(always)]
     pub fn reverse(&self) -> Self {
         Self(arch::swizzle_reverse(self.0))
     }
@@ -77,6 +107,8 @@ impl Float4 {
     /// let v = Float4::new(1.0, 2.0, 3.0, 4.0);
     /// assert_eq!(v.cdab().unpack(), (3.0, 4.0, 1.0, 2.0));
     /// ```
+    #[must_use]
+    #[inline(always)]
     pub fn cdab(&self) -> Self {
         Self(arch::swizzle_cdab(self.0))
     }
@@ -90,6 +122,8 @@ impl Float4 {
     /// let b = Float4::new(4.0, 3.0, 2.0, 0.0);
     /// assert_eq!(a.min(b), Float4::new(1.0, 2.0, 2.0, 0.0));
     /// ```
+    #[must_use]
+    #[inline(always)]
     pub fn min(&self, rhs: &Self) -> Self {
         Self(arch::min(self.0, rhs.0))
     }
@@ -103,6 +137,8 @@ impl Float4 {
     /// let b = Float4::new(4.0, 3.0, 2.0, 0.0);
     /// assert_eq!(a.max(b), Float4::new(4.0, 3.0, 3.0, 0.0));
     /// ```
+    #[must_use]
+    #[inline(always)]
     pub fn max(&self, rhs: &Self) -> Self {
         Self(arch::max(self.0, rhs.0))
     }
@@ -117,6 +153,8 @@ impl Float4 {
     /// let b = Float4::new(4.0, 3.0, 2.0, 0.0);
     /// assert_eq!(a.less_than(b), (true, true, false, false));
     /// ```
+    #[must_use]
+    #[inline(always)]
     pub fn less_than(&self, rhs: &Self) -> (bool, bool, bool, bool) {
         arch::less(self.0, rhs.0)
     }
@@ -131,10 +169,14 @@ impl Float4 {
     /// let b = Float4::new(4.0, 3.0, 2.0, 0.0);
     /// assert_eq!(a.less_than(b), (true, true, false, true));
     /// ```
+    #[must_use]
+    #[inline(always)]
     pub fn less_or_equal(&self, rhs: &Self) -> (bool, bool, bool, bool) {
         arch::less_or_equal(self.0, rhs.0)
     }
 
+    #[must_use]
+    #[inline(always)]
     pub fn eq(&self, rhs: &Self) -> (bool, bool, bool, bool) {
         arch::equal(self.0, rhs.0)
     }

@@ -5,20 +5,20 @@ use common::write_png;
 use shiny::{
     color::{Rgb, Srgb8},
     image::{cpu_image::CpuImage, Image},
-    shapes::{bezier::Bezier, path::PathBuilder, point::Point},
+    shapes::{bezier::Bezier, path::Builder, point::Point},
 };
 
 fn main() {
     let path = {
-        let mut builder = PathBuilder::new(Point(0.0, 100.0));
-        builder.add_cubic(Point(10.0, 50.0), Point(100.0, 100.0), Point(100.0, 0.0));
-        builder.add_cubic(Point(200.0, 50.0), Point(150.0, 0.0), Point(200.0, 100.0));
+        let mut builder = Builder::new(Point::new(0.0, 100.0));
+        builder.add_cubic(Point::new(10.0, 50.0), Point::new(100.0, 100.0), Point::new(100.0, 0.0));
+        builder.add_cubic(Point::new(200.0, 50.0), Point::new(150.0, 0.0), Point::new(200.0, 100.0));
         builder.add_cubic(
-            Point(180.0, 135.0),
-            Point(135.0, 180.0),
-            Point(100.0, 200.0),
+            Point::new(180.0, 135.0),
+            Point::new(135.0, 180.0),
+            Point::new(100.0, 200.0),
         );
-        builder.add_cubic(Point(50.0, 150.0), Point(50.0, 150.0), Point(0.0, 100.0));
+        builder.add_cubic(Point::new(50.0, 150.0), Point::new(50.0, 150.0), Point::new(0.0, 100.0));
         builder.build()
     };
 
@@ -45,7 +45,7 @@ fn main() {
                 }
 
                 let p = curve.at(t);
-                image.set(p.x().round() as u32, p.y().round() as u32, color);
+                image.set(p.x.round() as u32, p.y.round() as u32, color);
                 t += delta;
             }
         }

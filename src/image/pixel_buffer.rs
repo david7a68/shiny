@@ -9,21 +9,25 @@ pub struct PixelBuffer<C: Color> {
 }
 
 impl<C: Color> PixelBuffer<C> {
+    #[must_use]
     pub fn new(width: u32, height: u32) -> Self {
         Self {
             raw: Rc::new(RawPixelBuffer::new(width, height)),
         }
     }
 
+    #[must_use]
     pub fn width(&self) -> u32 {
         self.raw.width()
     }
 
+    #[must_use]
     pub fn height(&self) -> u32 {
         self.raw.height()
     }
 
     /// Retrieves the color of a single pixel.
+    #[must_use]
     pub fn get(&self, x: u32, y: u32) -> C {
         self.raw.get(x, y)
     }
@@ -35,23 +39,27 @@ impl<C: Color> PixelBuffer<C> {
     }
 
     /// Retrieves an entire row of pixels.
+    #[must_use]
     pub fn row(&self, y: u32) -> &[C] {
         self.raw.row(y)
     }
 
     /// Retrieves an entire row of mutable pixels, copying the buffer if other
     /// owning references exist.
+    #[must_use]
     pub fn row_mut(&mut self, y: u32) -> &mut [C] {
         Rc::make_mut(&mut self.raw).row_mut(y)
     }
 
     /// Retrieves the entire buffer's contents.
+    #[must_use]
     pub fn pixels(&self) -> &[C] {
         self.raw.pixels()
     }
 
     /// Retrieves the entire buffer's contents, coping the buffer if other
     /// owning references exist.
+    #[must_use]
     pub fn pixels_mut(&mut self) -> &mut [C] {
         Rc::make_mut(&mut self.raw).pixels_mut()
     }
@@ -68,12 +76,11 @@ impl<C: Color> RawPixelBuffer<C> {
     /// Creates a new buffer of the given size with uninitialized content.
     pub fn new(width: u32, height: u32) -> Self {
         let num_pixels = usize::try_from(width * height).unwrap();
-        let mut pixels = Vec::with_capacity(num_pixels);
-        unsafe { pixels.set_len(num_pixels) };
+        let pixels = vec![C::BLACK; num_pixels].into_boxed_slice();
 
         Self {
             width,
-            pixels: pixels.into_boxed_slice(),
+            pixels,
         }
     }
 
