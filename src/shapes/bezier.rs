@@ -1,5 +1,3 @@
-use std::borrow::Borrow;
-
 use super::{line::Line, point::Point, rect::Rect};
 use crate::{
     math::{
@@ -139,7 +137,7 @@ impl<'a> Bezier for CubicSlice<'a> {
 
     #[inline]
     fn intersections(&self, other: &Self) -> (ArrayVec<f32, 9>, ArrayVec<f32, 9>) {
-        intersections(&self.points, &other.points)
+        intersections(self.points, other.points)
     }
 }
 
@@ -222,11 +220,13 @@ fn split2(bezier: &[Point; 4], t1: f32, t2: f32) -> ([Point; 4], [Point; 4], [Po
 
 /// Calculates the t-value for every intersection between the two curves `a` and
 /// `b`.
+#[must_use]
 pub fn intersections(a: &[Point; 4], b: &[Point; 4]) -> (ArrayVec<f32, 9>, ArrayVec<f32, 9>) {
     intersections_in_range(a, b)
 }
 
 /// Calculates the intersections between the two curves `a` and `b` in the specified range.
+#[must_use]
 fn intersections_in_range(a: &[Point; 4], b: &[Point; 4]) -> (ArrayVec<f32, 9>, ArrayVec<f32, 9>) {
     let mut t_a = ArrayVec::new();
     let mut t_b = ArrayVec::new();
@@ -240,10 +240,10 @@ fn intersections_in_range(a: &[Point; 4], b: &[Point; 4]) -> (ArrayVec<f32, 9>, 
     loop {
         debug_assert!(a_start <= a_end);
         debug_assert!(b_start <= b_end);
-        debug_assert!(0.0 <= a_start && a_start <= 1.0);
-        debug_assert!(0.0 <= a_end && a_end <= 1.0);
-        debug_assert!(0.0 <= b_start && b_start <= 1.0);
-        debug_assert!(0.0 <= b_end && b_end <= 1.0);
+        debug_assert!((0.0..=1.0).contains(&a_start));
+        debug_assert!((0.0..=1.0).contains(&a_end));
+        debug_assert!((0.0..=1.0).contains(&b_start));
+        debug_assert!((0.0..=1.0).contains(&b_end));
 
         assert!(
             iterations < 100,
@@ -258,8 +258,8 @@ fn intersections_in_range(a: &[Point; 4], b: &[Point; 4]) -> (ArrayVec<f32, 9>, 
             break;
         }
 
-        let a_part = split2(&a, a_start, a_end).1;
-        let b_part = split2(&b, b_start, b_end).1;
+        let a_part = split2(a, a_start, a_end).1;
+        let b_part = split2(b, b_start, b_end).1;
 
         if (iterations & 1) == 0 {
             let (start, end) = clip(&a_part, &b_part);
