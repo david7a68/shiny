@@ -11,14 +11,26 @@ use shiny::{
 fn main() {
     let path = {
         let mut builder = Builder::new(Point::new(0.0, 100.0));
-        builder.add_cubic(Point::new(10.0, 50.0), Point::new(100.0, 100.0), Point::new(100.0, 0.0));
-        builder.add_cubic(Point::new(200.0, 50.0), Point::new(150.0, 0.0), Point::new(200.0, 100.0));
+        builder.add_cubic(
+            Point::new(10.0, 50.0),
+            Point::new(100.0, 100.0),
+            Point::new(100.0, 0.0),
+        );
+        builder.add_cubic(
+            Point::new(200.0, 50.0),
+            Point::new(150.0, 0.0),
+            Point::new(200.0, 100.0),
+        );
         builder.add_cubic(
             Point::new(180.0, 135.0),
             Point::new(135.0, 180.0),
             Point::new(100.0, 200.0),
         );
-        builder.add_cubic(Point::new(50.0, 150.0), Point::new(50.0, 150.0), Point::new(0.0, 100.0));
+        builder.add_cubic(
+            Point::new(50.0, 150.0),
+            Point::new(50.0, 150.0),
+            Point::new(0.0, 100.0),
+        );
         builder.build()
     };
 

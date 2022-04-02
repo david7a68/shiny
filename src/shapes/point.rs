@@ -1,6 +1,6 @@
 use std::ops::Sub;
 
-use crate::math::{interp::Interpolate, vector::Vec2};
+use crate::math::{cmp::ApproxEq, interp::Interpolate, vector::Vec2};
 
 /// A point in 2D space.
 #[derive(Clone, Copy, Debug, Default, PartialEq, PartialOrd)]
@@ -39,8 +39,14 @@ impl From<Vec2> for Point {
 impl Interpolate for Point {
     fn lerp(&self, t: f32, rhs: &Self) -> Self {
         Self {
-            x: self.x.lerp(t, &rhs.x), 
-            y: self.y.lerp(t, &rhs.y)
+            x: self.x.lerp(t, &rhs.x),
+            y: self.y.lerp(t, &rhs.y),
         }
+    }
+}
+
+impl ApproxEq for Point {
+    fn approx_eq(&self, other: Self) -> bool {
+        self.x.approx_eq(other.x) && self.y.approx_eq(other.y)
     }
 }

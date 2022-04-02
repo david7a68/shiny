@@ -123,13 +123,9 @@ impl<C: Raw> Color for Standard<C> {
     type Component = C::Component;
     type Alpha = C::Alpha;
 
-    const BLACK: Self = Self {
-        color: C::BLACK,
-    };
+    const BLACK: Self = Self { color: C::BLACK };
 
-    const WHITE: Self = Self {
-        color: C::WHITE,
-    };
+    const WHITE: Self = Self { color: C::WHITE };
 
     fn red(&self) -> Self::Component {
         self.color.red()

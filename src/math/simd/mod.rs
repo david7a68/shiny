@@ -92,6 +92,7 @@ impl Float4 {
     /// Returns the elements of the vector in reverse order.
     ///
     /// ```rust
+    /// # use shiny::math::simd::Float4;
     /// let v = Float4::new(1.0, 2.0, 3.0, 4.0);
     /// assert_eq!(v.reverse().unpack(), (4.0, 3.0, 2.0, 1.0));
     /// ```
@@ -104,6 +105,7 @@ impl Float4 {
     /// Returns the elements of the vector such that:
     ///
     /// ```rust
+    /// # use shiny::math::simd::Float4;
     /// let v = Float4::new(1.0, 2.0, 3.0, 4.0);
     /// assert_eq!(v.cdab().unpack(), (3.0, 4.0, 1.0, 2.0));
     /// ```
@@ -118,9 +120,10 @@ impl Float4 {
     /// but may make use of SIMD instructions to improve performance.
     ///
     /// ```rust
+    /// # use shiny::math::simd::Float4;
     /// let a = Float4::new(1.0, 2.0, 3.0, 0.0);
     /// let b = Float4::new(4.0, 3.0, 2.0, 0.0);
-    /// assert_eq!(a.min(b), Float4::new(1.0, 2.0, 2.0, 0.0));
+    /// assert_eq!(a.min(&b), Float4::new(1.0, 2.0, 2.0, 0.0));
     /// ```
     #[must_use]
     #[inline(always)]
@@ -133,9 +136,10 @@ impl Float4 {
     /// but may make use of SIMD instructions to improve performance.
     ///
     /// ```rust
+    /// # use shiny::math::simd::Float4;
     /// let a = Float4::new(1.0, 2.0, 3.0, 0.0);
     /// let b = Float4::new(4.0, 3.0, 2.0, 0.0);
-    /// assert_eq!(a.max(b), Float4::new(4.0, 3.0, 3.0, 0.0));
+    /// assert_eq!(a.max(&b), Float4::new(4.0, 3.0, 3.0, 0.0));
     /// ```
     #[must_use]
     #[inline(always)]
@@ -149,9 +153,10 @@ impl Float4 {
     /// performance.
     ///
     /// ```rust
+    /// # use shiny::math::simd::Float4;
     /// let a = Float4::new(1.0, 2.0, 3.0, 0.0);
     /// let b = Float4::new(4.0, 3.0, 2.0, 0.0);
-    /// assert_eq!(a.less_than(b), (true, true, false, false));
+    /// assert_eq!(a.less_than(&b), (true, true, false, false));
     /// ```
     #[must_use]
     #[inline(always)]
@@ -165,9 +170,10 @@ impl Float4 {
     /// performance.
     ///
     /// ```rust
+    /// # use shiny::math::simd::Float4;
     /// let a = Float4::new(1.0, 2.0, 3.0, 0.0);
     /// let b = Float4::new(4.0, 3.0, 2.0, 0.0);
-    /// assert_eq!(a.less_than(b), (true, true, false, true));
+    /// assert_eq!(a.less_than(&b), (true, true, false, false));
     /// ```
     #[must_use]
     #[inline(always)]

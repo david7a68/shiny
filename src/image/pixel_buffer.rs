@@ -78,10 +78,7 @@ impl<C: Color> RawPixelBuffer<C> {
         let num_pixels = usize::try_from(width * height).unwrap();
         let pixels = vec![C::BLACK; num_pixels].into_boxed_slice();
 
-        Self {
-            width,
-            pixels,
-        }
+        Self { width, pixels }
     }
 
     pub fn width(&self) -> u32 {

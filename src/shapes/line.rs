@@ -68,7 +68,7 @@ impl Line {
     /// positive result is on the opposite side from the origin.
     #[must_use]
     pub fn signed_distance_to(&self, point: Point) -> f32 {
-        -(self.a * point.x + self.b * point.y + self.c)
+        self.a * point.x + self.b * point.y + self.c
     }
 
     #[must_use]
@@ -155,8 +155,8 @@ mod tests {
         let line = Line::between(Point::new(2.0, 2.0), Point::new(6.0, 4.0));
         assert_eq!(line.signed_distance_to(Point::new(2.0, 2.0)), 0.0);
         // point on same side as the origin
-        assert!((-0.89442706).approx_eq(line.signed_distance_to(Point::new(2.0, 1.0))));
+        assert!(0.89442706.approx_eq(line.signed_distance_to(Point::new(2.0, 1.0))));
         // point on opposite side of the origin
-        assert!(0.89442706.approx_eq(line.signed_distance_to(Point::new(2.0, 3.0))));
+        assert!((-0.89442706).approx_eq(line.signed_distance_to(Point::new(2.0, 3.0))));
     }
 }

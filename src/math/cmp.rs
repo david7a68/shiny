@@ -1,7 +1,6 @@
-pub const APPROX_EQUAL_THRESHOLD: f32 = 1e-6;
+pub const APPROX_EQUAL_THRESHOLD: f32 = 1e-5;
 
 pub trait ApproxEq<Rhs = Self> {
-
     #[must_use]
     fn approx_eq(&self, other: Rhs) -> bool;
 }

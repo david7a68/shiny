@@ -4,9 +4,10 @@ pub trait Interpolate {
     /// Implements linear interpolation.
     ///
     /// ```rust
+    /// # use shiny::math::interp::Interpolate;
     /// let a = 1.0;
     /// let b = 2.0;
-    /// assert_eq(a.lerp(b, 0.5), 1.5);
+    /// assert_eq!(a.lerp(0.5, &b), 1.5);
     /// ```
     #[must_use]
     fn lerp(&self, t: f32, rhs: &Self) -> Self;

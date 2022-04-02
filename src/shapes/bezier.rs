@@ -1,11 +1,17 @@
+use std::borrow::Borrow;
+
 use super::{line::Line, point::Point, rect::Rect};
 use crate::{
     math::{
+        cmp::ApproxEq,
         interp::Interpolate,
         matrix::{Mat1x4, Mat2x4, Mat4x4},
         simd::Float4,
     },
-    utils::cmp::{max, min},
+    utils::{
+        arrayvec::ArrayVec,
+        cmp::{max, min},
+    },
 };
 
 pub trait Bezier: Sized {
@@ -22,6 +28,9 @@ pub trait Bezier: Sized {
 
     #[must_use]
     fn split2(&self, t1: f32, t3: f32) -> (Self::Owning, Self::Owning, Self::Owning);
+
+    #[must_use]
+    fn intersections(&self, other: &Self) -> (ArrayVec<f32, 9>, ArrayVec<f32, 9>);
 }
 
 /// A cubic bezier curve.
@@ -31,7 +40,14 @@ pub struct Cubic {
 
 impl Cubic {
     #[must_use]
-    pub fn as_ref(&self) -> CubicSlice {
+    pub fn new(p1: Point, p2: Point, p3: Point, p4: Point) -> Self {
+        Self {
+            points: [p1, p2, p3, p4],
+        }
+    }
+
+    #[must_use]
+    pub fn borrow(&self) -> CubicSlice {
         CubicSlice::new(&self.points)
     }
 }
@@ -66,6 +82,11 @@ impl Bezier for Cubic {
             Self::Owning { points: center },
             Self::Owning { points: right },
         )
+    }
+
+    #[inline]
+    fn intersections(&self, other: &Self) -> (ArrayVec<f32, 9>, ArrayVec<f32, 9>) {
+        intersections(&self.points, &other.points)
     }
 }
 
@@ -115,6 +136,11 @@ impl<'a> Bezier for CubicSlice<'a> {
             Self::Owning { points: right },
         )
     }
+
+    #[inline]
+    fn intersections(&self, other: &Self) -> (ArrayVec<f32, 9>, ArrayVec<f32, 9>) {
+        intersections(&self.points, &other.points)
+    }
 }
 
 #[must_use]
@@ -130,15 +156,12 @@ fn evaluate(bezier: &[Point; 4], t: f32) -> Point {
         -1.0, 3.0, -3.0, 1.0,
     );
 
+    #[rustfmt::skip]
     let p = Mat2x4::new(
-        bezier[0].x,
-        bezier[0].y,
-        bezier[1].x,
-        bezier[1].y,
-        bezier[2].x,
-        bezier[2].y,
-        bezier[3].x,
-        bezier[3].y,
+        bezier[0].x, bezier[0].y,
+        bezier[1].x, bezier[1].y,
+        bezier[2].x, bezier[2].y,
+        bezier[3].x, bezier[3].y,
     );
 
     let tmp = t * m * p;
@@ -197,17 +220,78 @@ fn split2(bezier: &[Point; 4], t1: f32, t2: f32) -> ([Point; 4], [Point; 4], [Po
     (left, mid, right)
 }
 
+/// Calculates the t-value for every intersection between the two curves `a` and
+/// `b`.
+pub fn intersections(a: &[Point; 4], b: &[Point; 4]) -> (ArrayVec<f32, 9>, ArrayVec<f32, 9>) {
+    intersections_in_range(a, b)
+}
+
+/// Calculates the intersections between the two curves `a` and `b` in the specified range.
+fn intersections_in_range(a: &[Point; 4], b: &[Point; 4]) -> (ArrayVec<f32, 9>, ArrayVec<f32, 9>) {
+    let mut t_a = ArrayVec::new();
+    let mut t_b = ArrayVec::new();
+    let mut iterations = 0;
+
+    let mut a_start = 0.0;
+    let mut a_end = 1.0;
+    let mut b_start = 0.0;
+    let mut b_end = 1.0;
+
+    loop {
+        debug_assert!(a_start <= a_end);
+        debug_assert!(b_start <= b_end);
+        debug_assert!(0.0 <= a_start && a_start <= 1.0);
+        debug_assert!(0.0 <= a_end && a_end <= 1.0);
+        debug_assert!(0.0 <= b_start && b_start <= 1.0);
+        debug_assert!(0.0 <= b_end && b_end <= 1.0);
+
+        assert!(
+            iterations < 100,
+            "Hit max iterations, degenerate case? a={:?}, b={:?}",
+            a,
+            b
+        );
+
+        if a_start.approx_eq(a_end) & b_start.approx_eq(b_end) {
+            t_a.push(a_start);
+            t_b.push(b_start);
+            break;
+        }
+
+        let a_part = split2(&a, a_start, a_end).1;
+        let b_part = split2(&b, b_start, b_end).1;
+
+        if (iterations & 1) == 0 {
+            let (start, end) = clip(&a_part, &b_part);
+            a_start = a_start + (a_end - a_start) * start;
+            a_end = a_start + (a_end - a_start) * end;
+
+            // if clipping reduced the (end - start) by less than 20%, split the
+            // 'longest' of (a_end - a_start) and (b_end - b_start) in half, and
+            // recursively find intersections on each half.
+        } else {
+            let (start, end) = clip(&b_part, &a_part);
+            b_start = b_start + (b_end - b_start) * start;
+            b_end = b_start + (b_end - b_start) * end;
+
+            // if clipping reduced the (end - start) by less than 20%, split the
+            // 'longest' of (a_end - a_start) and (b_end - b_start) in half, and
+            // recursively find intersections on each half.
+        }
+
+        iterations += 1;
+    }
+
+    (t_a, t_b)
+}
+
 /// Clips `a` against `b`, producing t-bounds where `a` lies within `b`'s fat
 /// line.
 #[must_use]
-pub fn clip(curve: &[Point; 4], against: &[Point; 4]) -> (f32, f32) {
+fn clip(curve: &[Point; 4], against: &[Point; 4]) -> (f32, f32) {
     let (min_line, max_line) = {
-        let thin = Line::between(against[0], against[3]);
-        let line1 = thin.parallel_through(against[1]);
-        let line2 = thin.parallel_through(against[2]);
-        let min_c = min!(thin.c, line1.c, line2.c);
-        let max_c = max!(thin.c, line1.c, line2.c);
-        (-Line::with_c(thin, min_c), Line::with_c(thin, max_c))
+        let (low, high) = fat_line(against);
+        (-low, high)
     };
 
     let min_clip = clip_line(curve, &min_line);
@@ -216,13 +300,23 @@ pub fn clip(curve: &[Point; 4], against: &[Point; 4]) -> (f32, f32) {
     (max!(min_clip.0, max_clip.0), min!(min_clip.1, max_clip.1))
 }
 
+#[must_use]
+fn fat_line(curve: &[Point; 4]) -> (Line, Line) {
+    let thin = Line::between(curve[0], curve[3]);
+    let line1 = thin.parallel_through(curve[1]);
+    let line2 = thin.parallel_through(curve[2]);
+    let min_c = min!(thin.c, line1.c, line2.c);
+    let max_c = max!(thin.c, line1.c, line2.c);
+    (Line::with_c(thin, min_c), Line::with_c(thin, max_c))
+}
+
 /// Clips `curve` against `line`, returning a t-bound that is guaranteed to
 /// be 'above' the line (distance is positive).
 ///
 /// This algorithm does not attempt to calculate the precise point of
 /// intersection, but only a close-enough approximation.
 #[must_use]
-pub fn clip_line(curve: &[Point; 4], line: &Line) -> (f32, f32) {
+fn clip_line(curve: &[Point; 4], line: &Line) -> (f32, f32) {
     let e0 = Point::new(0.0, line.signed_distance_to(curve[0]));
     let e1 = Point::new(1.0 / 3.0, line.signed_distance_to(curve[1]));
     let e2 = Point::new(2.0 / 3.0, line.signed_distance_to(curve[2]));
@@ -310,7 +404,48 @@ mod tests {
     }
 
     #[test]
-    fn clip_bezier() {
+    fn split() {
+        let bezier = Cubic {
+            points: [
+                Point::new(10.0, 5.0),
+                Point::new(3.0, 11.0),
+                Point::new(12.0, 20.0),
+                Point::new(6.0, 15.0),
+            ],
+        };
+
+        let (left, right) = bezier.split(0.5);
+
+        for t in 0..50 {
+            let t = t as f32 / 50.0;
+            let left = left.at(t);
+            let original = bezier.at(t / 2.0);
+            assert!(
+                left.approx_eq(original),
+                "left: {:?}, original: {:?}",
+                left,
+                original
+            );
+            // assert_eq!(left.at(t), bezier.at(t / 2.0));
+        }
+
+        for t in 0..50 {
+            let t = t as f32 / 50.0;
+            let right = right.at(t);
+            let original = bezier.at(0.5 + t / 2.0);
+            // assert!(right.at(t).approx_eq(bezier.at(0.5 + t / 2.0)));
+            assert!(
+                right.approx_eq(original),
+                "right: {:?}, original: {:?}",
+                right,
+                original
+            );
+            // assert_eq!(right.at(t), bezier.at(0.5 + t / 2.0));
+        }
+    }
+
+    #[test]
+    fn clip() {
         let curve1 = Cubic {
             points: [
                 Point::new(24.0, 21.0),
@@ -328,8 +463,48 @@ mod tests {
             ],
         };
 
-        let curve1_limits = clip(&curve1.points, &curve2.points);
+        let curve1_limits = super::clip(&curve1.points, &curve2.points);
         assert_eq!(curve1_limits, (0.18543269, 0.91614604));
+    }
+
+    #[test]
+    fn fat_line() {
+        let curve = Cubic {
+            points: [
+                Point::new(18.0, 122.0),
+                Point::new(15.0, 178.0),
+                Point::new(247.0, 173.0),
+                Point::new(251.0, 242.0),
+            ],
+        };
+
+        let thin = Line::between(curve.points[0], curve.points[3]);
+        let (low, high) = super::fat_line(&curve.points);
+
+        assert!(low.c.approx_eq(40.70803));
+        assert!(high.c.approx_eq(151.37787));
+
+        assert!(thin.a.approx_eq(low.a));
+        assert!(thin.b.approx_eq(low.b));
+
+        assert!(low.signed_distance_to(curve.points[2]).approx_eq(0.0));
+        assert!(high.signed_distance_to(curve.points[1]).approx_eq(0.0));
+    }
+
+    #[test]
+    fn clip_line() {
+        let line = Line::new(0.0, 0.0, 1.0);
+        let curve = Cubic {
+            points: [
+                Point::new(24.0, 21.0),
+                Point::new(189.0, 40.0),
+                Point::new(159.0, 137.0),
+                Point::new(101.0, 261.0),
+            ],
+        };
+
+        let clip = super::clip_line(&curve.points, &line);
+        assert_eq!(clip, (0.0, 1.0));
     }
 }
 

@@ -8,8 +8,8 @@ use pixel_buffer::PixelBuffer;
 ///
 /// e.g.:
 /// ```rust
-/// # use image::image::CpuImage;
-/// # use image::color::Srgb8;
+/// # use shiny::image::cpu_image::CpuImage;
+/// # use shiny::color::Srgb8;
 /// type SrgbCpuImage = CpuImage<Srgb8>;
 /// ```
 pub trait Image<C: Color> {
