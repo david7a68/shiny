@@ -92,6 +92,7 @@ impl Bezier for Cubic {
 /// composites of several curves, where the first and last point can be shared
 /// with the curves before and after, respectively. This can significantly
 /// reduce the number of points that need to be stored.
+#[derive(Debug)]
 pub struct CubicSlice<'a> {
     pub points: &'a [Point; 4],
 }
@@ -263,16 +264,18 @@ fn intersections_in_range(a: &[Point; 4], b: &[Point; 4]) -> (ArrayVec<f32, 9>, 
 
         if (iterations & 1) == 0 {
             let (start, end) = clip(&a_part, &b_part);
-            a_start = a_start + (a_end - a_start) * start;
-            a_end = a_start + (a_end - a_start) * end;
+            let offset = a_start;
+            a_start = offset + (a_end - offset) * start;
+            a_end = offset + (a_end - offset) * end;
 
             // if clipping reduced the (end - start) by less than 20%, split the
             // 'longest' of (a_end - a_start) and (b_end - b_start) in half, and
             // recursively find intersections on each half.
         } else {
             let (start, end) = clip(&b_part, &a_part);
-            b_start = b_start + (b_end - b_start) * start;
-            b_end = b_start + (b_end - b_start) * end;
+            let offset = b_start;
+            b_start = offset + (b_end - offset) * start;
+            b_end = offset + (b_end - offset) * end;
 
             // if clipping reduced the (end - start) by less than 20%, split the
             // 'longest' of (a_end - a_start) and (b_end - b_start) in half, and
@@ -282,6 +285,7 @@ fn intersections_in_range(a: &[Point; 4], b: &[Point; 4]) -> (ArrayVec<f32, 9>, 
         iterations += 1;
     }
 
+    println!("ITERATIONS: {}", iterations);
     (t_a, t_b)
 }
 
@@ -445,6 +449,31 @@ mod tests {
     }
 
     #[test]
+    fn intersection() {
+        let curve1 = [
+            Point { x: 24.0, y: 21.0 },
+            Point { x: 189.0, y: 40.0 },
+            Point { x: 159.0, y: 137.0 },
+            Point { x: 101.0, y: 261.0 },
+        ];
+
+        let curve2 = [
+            Point { x: 18.0, y: 122.0 },
+            Point { x: 15.0, y: 178.0 },
+            Point { x: 247.0, y: 173.0 },
+            Point { x: 251.0, y: 242.0 },
+        ];
+
+        let (t1, t2) = intersections(&curve1, &curve2);
+
+        assert_eq!(t1.len(), t2.len());
+        assert_eq!(t1.len(), 1);
+
+        assert!(t1[0].approx_eq(0.76273954));
+        assert!(t2[0].approx_eq(0.50988877));
+    }
+
+    #[test]
     fn clip() {
         let curve1 = Cubic {
             points: [
@@ -507,81 +536,3 @@ mod tests {
         assert_eq!(clip, (0.0, 1.0));
     }
 }
-
-// /// Removes intersections between two curves, replacing each with
-// /// non-intersecting spans. The resulting arrays of curves are in-order from t=0
-// /// to t=1.
-// ///
-// /// This process makes use of the bezier clipping algorithm to identify
-// /// curve-curve intersections.
-// fn flatten<'a, 'b>(
-//     lhs: &'a CubicBezier,
-//     rhs: &'b CubicBezier,
-// ) -> (
-//     ArrayVec<CubicBezierSlice<'a>, 10>,
-//     ArrayVec<CubicBezierSlice<'b>, 10>,
-// ) {
-//     let mut a = lhs.get(..);
-//     let mut b = rhs.get(..);
-
-//     let mut lhs_intersections = ArrayVec::<f32, 10>::new();
-//     let mut rhs_intersections = ArrayVec::<f32, 10>::new();
-//     let mut iterations = 0;
-//     loop {
-//         let a_ok = (a.end - a.start) < 0.0001;
-//         let b_ok = (b.end - b.start) < 0.0001;
-//         if a_ok & b_ok {
-//             if (iterations & 1) == 0 {
-//                 lhs_intersections.push(a.end);
-//                 rhs_intersections.push(b.end);
-//             } else {
-//                 lhs_intersections.push(b.end);
-//                 rhs_intersections.push(a.end);
-//             }
-//             break;
-//         }
-
-//         let (l, r) = clip(&a, &b);
-
-//         // if l.diff or r.diff shrank by less than 20%, split the longest one in
-//         // half and try again.
-
-//         a = r;
-//         b = l;
-//         iterations += 1;
-//     }
-
-//     lhs_intersections.sort_by(|a, b| a.partial_cmp(b).unwrap());
-//     rhs_intersections.sort_by(|a, b| a.partial_cmp(b).unwrap());
-
-//     /*
-//     The Bezier Clipping Method:
-
-//     1. To clip P(t) against Q(u)...
-//         a. Identify the fat line L that bounds Q(u).
-//             i. Optionally, identify the fat line K perpendicular to Q(u) and
-//                select the narrower of the two.
-//         b. Identify the intervals of P(t) that fall outside L.
-//         c. Extract the sub-curve of P(t) that lies inside L using the
-//            de Casteljau method.
-//         d. Return the result as P₂(t) aka P(t₁..t₂)
-//     2. Repeat (1), clipping Q(u) against P₂(t) to produce Q₂(u).
-//     3. Repeat (1) again clipping P₂(t) against, Q₂(u) to produce P₃(t).
-//     4. Repeat until t₁ ≈ t₂ and u₁ ≈ u₂, within some error margin.
-//     5. Finish with t and u as the identified interpolation factor.
-
-//     On Identifying Multiple Intersections:
-
-//     1. Heuristic: If a Bezier clip fails to reduce the parameter range of either
-//        curve by at least 20%, subdivide the curve with the largest remaining
-//        interval in half and test each segment separately.
-//        a. Apply recursively until all intersections (max 9) have been found.
-//        b. Sort the resulting interpolation factors 0-1.
-//     */
-//     let lhs_result = ArrayVec::new();
-//     let rhs_result = ArrayVec::new();
-
-//     // create spans 0..1 interrupted by intersection points
-
-//     (lhs_result, rhs_result)
-// }
