@@ -28,7 +28,7 @@ pub trait Bezier: Sized {
     fn split2(&self, t1: f32, t3: f32) -> (Self::Owning, Self::Owning, Self::Owning);
 
     #[must_use]
-    fn intersections(&self, other: &Self) -> (ArrayVec<f32, 9>, ArrayVec<f32, 9>);
+    fn intersections(&self, other: &Self) -> ArrayVec<(f32, f32), 9>;
 }
 
 /// A cubic bezier curve.
@@ -83,8 +83,8 @@ impl Bezier for Cubic {
     }
 
     #[inline]
-    fn intersections(&self, other: &Self) -> (ArrayVec<f32, 9>, ArrayVec<f32, 9>) {
-        intersections(&self.points, &other.points)
+    fn intersections(&self, other: &Self) -> ArrayVec<(f32, f32), 9> {
+        find_intersections(&self.points, &other.points)
     }
 }
 
@@ -137,12 +137,11 @@ impl<'a> Bezier for CubicSlice<'a> {
     }
 
     #[inline]
-    fn intersections(&self, other: &Self) -> (ArrayVec<f32, 9>, ArrayVec<f32, 9>) {
-        intersections(self.points, other.points)
+    fn intersections(&self, other: &Self) -> ArrayVec<(f32, f32), 9> {
+        find_intersections(self.points, other.points)
     }
 }
 
-#[must_use]
 fn evaluate(bezier: &[Point; 4], t: f32) -> Point {
     // let t_inv = 1.0 - t;
     // ((t_inv.powf(3.0) * self.p0.vec()) + (3.0 * t_inv.powf(2.0) * t * self.p1.vec()) + (3.0 * t_inv * t.powf(2.0) * self.p2.vec()) + (t.powf(3.0) * self.p3.vec())).into()
@@ -167,7 +166,6 @@ fn evaluate(bezier: &[Point; 4], t: f32) -> Point {
     Point::new(tmp.x(), tmp.y())
 }
 
-#[must_use]
 fn coarse_bounds(bezier: &[Point; 4]) -> Rect {
     // let x_min = self.p0.x().min(self.p1.x()).min(self.p2.x().min(self.p2.x()));
     // let x_max = self.p0.x().max(self.p1.x()).max(self.p2.x().max(self.p2.x()));
@@ -195,7 +193,6 @@ fn coarse_bounds(bezier: &[Point; 4]) -> Rect {
     Rect::new(min3.a(), max3.a(), min3.b(), max3.b())
 }
 
-#[must_use]
 fn split(bezier: &[Point; 4], t: f32) -> ([Point; 4], [Point; 4]) {
     let mid_01 = bezier[0].lerp(t, &bezier[1]);
     let mid_12 = bezier[1].lerp(t, &bezier[2]);
@@ -212,7 +209,6 @@ fn split(bezier: &[Point; 4], t: f32) -> ([Point; 4], [Point; 4]) {
     (a, b)
 }
 
-#[must_use]
 fn split2(bezier: &[Point; 4], t1: f32, t2: f32) -> ([Point; 4], [Point; 4], [Point; 4]) {
     let (left, rest) = split(bezier, t1);
     let (mid, right) = split(&rest, (t2 - t1) / (1.0 - t1));
@@ -222,76 +218,124 @@ fn split2(bezier: &[Point; 4], t1: f32, t2: f32) -> ([Point; 4], [Point; 4], [Po
 /// Calculates the t-value for every intersection between the two curves `a` and
 /// `b`.
 #[must_use]
-pub fn intersections(a: &[Point; 4], b: &[Point; 4]) -> (ArrayVec<f32, 9>, ArrayVec<f32, 9>) {
-    intersections_in_range(a, b)
+pub fn find_intersections(a: &[Point; 4], b: &[Point; 4]) -> ArrayVec<(f32, f32), 9> {
+    find_intersections_in_range(CurvePart::new(a, 0.0, 1.0), CurvePart::new(b, 0.0, 1.0))
 }
 
-/// Calculates the intersections between the two curves `a` and `b` in the specified range.
-#[must_use]
-fn intersections_in_range(a: &[Point; 4], b: &[Point; 4]) -> (ArrayVec<f32, 9>, ArrayVec<f32, 9>) {
-    let mut t_a = ArrayVec::new();
-    let mut t_b = ArrayVec::new();
-    let mut iterations = 0;
+#[derive(Debug, Clone, Copy)]
+struct CurvePart<'a> {
+    points: &'a [Point; 4],
+    start: f32,
+    end: f32,
+}
 
-    let mut a_start = 0.0;
-    let mut a_end = 1.0;
-    let mut b_start = 0.0;
-    let mut b_end = 1.0;
+impl<'a> CurvePart<'a> {
+    fn new(points: &'a [Point; 4], start: f32, end: f32) -> Self {
+        Self { points, start, end }
+    }
+
+    fn length(&self) -> f32 {
+        self.end - self.start
+    }
+
+    fn get(&self) -> [Point; 4] {
+        split2(self.points, self.start, self.end).1
+    }
+
+    fn split(&self, at: f32) -> (Self, Self) {
+        let at = self.start + at * (self.end - self.start);
+        (
+            Self::new(self.points, self.start, at),
+            Self::new(self.points, at, self.end),
+        )
+    }
+
+    fn map_to_parent(&self, t: f32) -> f32 {
+        debug_assert!((0.0..=1.0).contains(&t));
+        self.start + (t * (self.end - self.start))
+    }
+
+    fn is_valid(&self) -> bool {
+        (0.0..=1.0).contains(&self.start)
+            && (0.0..=1.0).contains(&self.end)
+            && (self.start <= self.end)
+    }
+}
+
+/// Finds the intersections between two curves within the specified ranges.
+fn find_intersections_in_range(mut a: CurvePart, mut b: CurvePart) -> ArrayVec<(f32, f32), 9> {
+    let mut intersections = ArrayVec::new();
+    let mut num_iterations = 0;
+
+    #[derive(Debug)]
+    enum Result {
+        Split,
+        NoSplit,
+        NoIntersection
+    }
+
+    let calc = |curve: &mut CurvePart, against: &mut CurvePart| {
+        let initial_length = curve.length();
+
+        let (start, end) = clip(&curve.get(), &against.get());
+        (curve.start, curve.end) = (curve.map_to_parent(start), curve.map_to_parent(end));
+
+        if curve.end < curve.start {
+            Result::NoIntersection
+        }
+        else if initial_length * 0.8 < curve.length() {
+            Result::Split
+        } else {
+            Result::NoSplit
+        }
+    };
 
     loop {
-        debug_assert!(a_start <= a_end);
-        debug_assert!(b_start <= b_end);
-        debug_assert!((0.0..=1.0).contains(&a_start));
-        debug_assert!((0.0..=1.0).contains(&a_end));
-        debug_assert!((0.0..=1.0).contains(&b_start));
-        debug_assert!((0.0..=1.0).contains(&b_end));
+        debug_assert!(a.is_valid());
+        debug_assert!(b.is_valid());
 
         assert!(
-            iterations < 100,
+            num_iterations < 15,
             "Hit max iterations, degenerate case? a={:?}, b={:?}",
             a,
             b
         );
 
-        if a_start.approx_eq(a_end) & b_start.approx_eq(b_end) {
-            t_a.push(a_start);
-            t_b.push(b_start);
-            break;
-        }
-
-        let a_part = split2(a, a_start, a_end).1;
-        let b_part = split2(b, b_start, b_end).1;
-
-        if (iterations & 1) == 0 {
-            let (start, end) = clip(&a_part, &b_part);
-            let offset = a_start;
-            a_start = offset + (a_end - offset) * start;
-            a_end = offset + (a_end - offset) * end;
-
-            // if clipping reduced the (end - start) by less than 20%, split the
-            // 'longest' of (a_end - a_start) and (b_end - b_start) in half, and
-            // recursively find intersections on each half.
+        // Alternate between a and b
+        let needs_split = if (num_iterations & 1) == 0 {
+            calc(&mut a, &mut b)
         } else {
-            let (start, end) = clip(&b_part, &a_part);
-            let offset = b_start;
-            b_start = offset + (b_end - offset) * start;
-            b_end = offset + (b_end - offset) * end;
+            calc(&mut b, &mut a)
+        };
 
-            // if clipping reduced the (end - start) by less than 20%, split the
-            // 'longest' of (a_end - a_start) and (b_end - b_start) in half, and
-            // recursively find intersections on each half.
+        match needs_split {
+            Result::Split => {
+                if a.length() > b.length() {
+                    let (left, right) = a.split(0.5);
+                    intersections.extend(&find_intersections_in_range(left, b));
+                    intersections.extend(&find_intersections_in_range(right, b));
+                } else {
+                    let (left, right) = b.split(0.5);
+                    intersections.extend(&find_intersections_in_range(a, left));
+                    intersections.extend(&find_intersections_in_range(a, right));
+                }
+                break;
+            },
+            Result::NoSplit => if a.start.approx_eq(a.end) & b.start.approx_eq(b.end) {
+                intersections.push((a.start, b.start));
+                break;
+            },
+            Result::NoIntersection => break,
         }
 
-        iterations += 1;
+        num_iterations += 1;
     }
 
-    println!("ITERATIONS: {}", iterations);
-    (t_a, t_b)
+    intersections
 }
 
 /// Clips `a` against `b`, producing t-bounds where `a` lies within `b`'s fat
 /// line.
-#[must_use]
 fn clip(curve: &[Point; 4], against: &[Point; 4]) -> (f32, f32) {
     let (min_line, max_line) = {
         let (low, high) = fat_line(against);
@@ -300,11 +344,13 @@ fn clip(curve: &[Point; 4], against: &[Point; 4]) -> (f32, f32) {
 
     let min_clip = clip_line(curve, &min_line);
     let max_clip = clip_line(curve, &max_line);
-
     (max!(min_clip.0, max_clip.0), min!(min_clip.1, max_clip.1))
 }
 
-#[must_use]
+/// Calculates the two lines that bound the curve. This is currently done using
+/// only the control points. A more refined method using inflection points may
+/// or may not improve performance (extra work per curve for possibly fewer
+/// clipping operations).
 fn fat_line(curve: &[Point; 4]) -> (Line, Line) {
     let thin = Line::between(curve[0], curve[3]);
     let line1 = thin.parallel_through(curve[1]);
@@ -319,7 +365,6 @@ fn fat_line(curve: &[Point; 4]) -> (Line, Line) {
 ///
 /// This algorithm does not attempt to calculate the precise point of
 /// intersection, but only a close-enough approximation.
-#[must_use]
 fn clip_line(curve: &[Point; 4], line: &Line) -> (f32, f32) {
     let e0 = Point::new(0.0, line.signed_distance_to(curve[0]));
     let e1 = Point::new(1.0 / 3.0, line.signed_distance_to(curve[1]));
@@ -449,7 +494,7 @@ mod tests {
     }
 
     #[test]
-    fn intersection() {
+    fn one_intersection() {
         let curve1 = [
             Point { x: 24.0, y: 21.0 },
             Point { x: 189.0, y: 40.0 },
@@ -464,13 +509,36 @@ mod tests {
             Point { x: 251.0, y: 242.0 },
         ];
 
-        let (t1, t2) = intersections(&curve1, &curve2);
+        let t = find_intersections(&curve1, &curve2);
 
-        assert_eq!(t1.len(), t2.len());
-        assert_eq!(t1.len(), 1);
+        assert_eq!(t.len(), 1);
 
-        assert!(t1[0].approx_eq(0.76273954));
-        assert!(t2[0].approx_eq(0.50988877));
+        assert!(t[0].0.approx_eq(0.76273954));
+        assert!(t[0].1.approx_eq(0.50988877));
+    }
+
+    #[test]
+    fn two_intersections() {
+        let curve1 = [
+            Point::new(204.0, 41.0),
+            Point::new(45.0, 235.0),
+            Point::new(220.0, 235.0),
+            Point::new(226.0, 146.0),
+        ];
+
+        let curve2 = [
+            Point::new(100.0, 98.0),
+            Point::new(164.0, 45.0),
+            Point::new(187.0, 98.0),
+            Point::new(119.0, 247.0),
+        ];
+
+        let t = find_intersections(&curve1, &curve2);
+        assert_eq!(t.len(), 2);
+
+        println!("{:?}:{:?}", super::evaluate(&curve1, t[0].0), super::evaluate(&curve2, t[0].1));
+
+        assert!(super::evaluate(&curve1, t[0].0).approx_eq(super::evaluate(&curve2, t[0].1)));
     }
 
     #[test]

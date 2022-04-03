@@ -200,6 +200,21 @@ impl<T, const N: usize> std::ops::IndexMut<usize> for ArrayVec<T, N> {
     }
 }
 
+impl<'a, T, const N: usize> Extend<&'a T> for ArrayVec<T, N>
+where
+    T: 'a + Copy,
+{
+    fn extend<I: IntoIterator<Item = &'a T>>(&mut self, iter: I) {
+        for element in iter {
+            if self.is_full() {
+                break;
+            }
+
+            self.push(*element);
+        }
+    }
+}
+
 impl<T, const N1: usize, const N2: usize> From<[T; N1]> for ArrayVec<T, N2>
 where
     T: Copy,
