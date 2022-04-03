@@ -21,6 +21,12 @@ impl Float4 {
         Self(arch::pack(a, b, c, d))
     }
 
+    #[must_use]
+    #[inline(always)]
+    pub fn from_array(arr: [f32; 4]) -> Self {
+        Self(arch::pack_array(&arr))
+    }
+
     /// Repeats the value `v` in every element of the vector.
     #[must_use]
     #[inline(always)]
@@ -185,6 +191,18 @@ impl Float4 {
     #[inline(always)]
     pub fn eq(&self, rhs: &Self) -> (bool, bool, bool, bool) {
         arch::equal(self.0, rhs.0)
+    }
+
+    #[must_use]
+    #[inline(always)]
+    pub fn rotate_right(&self, amount: usize) -> Self {
+        match amount {
+            0 => *self,
+            1 => Self(arch::rotate_right_1(self.0)),
+            2 => Self(arch::rotate_right_2(self.0)),
+            3 => Self(arch::rotate_right_3(self.0)),
+            _ => panic!("rotate_right: amount must be between 0 and 3"),
+        }
     }
 }
 

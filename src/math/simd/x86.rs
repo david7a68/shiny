@@ -1,7 +1,7 @@
 use std::arch::x86_64::{
     __m128, _mm_add_ps, _mm_andnot_ps, _mm_castsi128_ps, _mm_cmpeq_ps, _mm_cmple_ps, _mm_cmplt_ps,
-    _mm_div_ps, _mm_max_ps, _mm_min_ps, _mm_movemask_ps, _mm_mul_ps, _mm_set1_epi32, _mm_set1_ps,
-    _mm_set_ps, _mm_shuffle_ps, _mm_sqrt_ps, _mm_sub_ps,
+    _mm_div_ps, _mm_loadu_ps, _mm_max_ps, _mm_min_ps, _mm_movemask_ps, _mm_mul_ps, _mm_set1_epi32,
+    _mm_set1_ps, _mm_set_ps, _mm_shuffle_ps, _mm_sqrt_ps, _mm_sub_ps,
 };
 
 pub type Float4 = __m128;
@@ -14,6 +14,10 @@ const fn _MM_SHUFFLE(x: i32, y: i32, z: i32, w: i32) -> i32 {
 
 pub fn pack(a: f32, b: f32, c: f32, d: f32) -> Float4 {
     unsafe { _mm_set_ps(d, c, b, a) }
+}
+
+pub fn pack_array(arr: &[f32; 4]) -> Float4 {
+    unsafe { _mm_loadu_ps(arr.as_ptr()) }
 }
 
 pub fn splat(v: f32) -> Float4 {
@@ -86,6 +90,18 @@ pub fn less_or_equal(lhs: Float4, rhs: Float4) -> (bool, bool, bool, bool) {
     bitmask_to_bool4(mask)
 }
 
+pub fn rotate_right_1(lhs: Float4) -> Float4 {
+    unsafe { _mm_shuffle_ps(lhs, lhs, _MM_SHUFFLE(2, 1, 0, 3)) }
+}
+
+pub fn rotate_right_2(lhs: Float4) -> Float4 {
+    unsafe { _mm_shuffle_ps(lhs, lhs, _MM_SHUFFLE(1, 0, 3, 2)) }
+}
+
+pub fn rotate_right_3(lhs: Float4) -> Float4 {
+    unsafe { _mm_shuffle_ps(lhs, lhs, _MM_SHUFFLE(0, 3, 2, 1)) }
+}
+
 /// Computes the horizontal sum of two 4-float vectors simultaneously in order
 /// to improve register usage.
 pub fn horizontal_sum2(v1: Float4, v2: Float4) -> (f32, f32) {
@@ -103,15 +119,6 @@ pub fn horizontal_sum2(v1: Float4, v2: Float4) -> (f32, f32) {
         let r: (f32, f32, f32, f32) = unpack(_mm_add_ps(sum_hi_lo_12, rotated));
         (r.0, r.2)
     }
-}
-
-fn bitmask_to_bool4(mask: i32) -> (bool, bool, bool, bool) {
-    (
-        (mask & 0b1) != 0,
-        (mask & 0b10) != 0,
-        (mask & 0b100) != 0,
-        (mask & 0b1000) != 0,
-    )
 }
 
 pub fn horizontal_sum4(v1: Float4, v2: Float4, v3: Float4, v4: Float4) -> Float4 {
@@ -140,16 +147,46 @@ pub fn horizontal_sum4(v1: Float4, v2: Float4, v3: Float4, v4: Float4) -> Float4
     }
 }
 
+fn bitmask_to_bool4(mask: i32) -> (bool, bool, bool, bool) {
+    (
+        (mask & 0b1) != 0,
+        (mask & 0b10) != 0,
+        (mask & 0b100) != 0,
+        (mask & 0b1000) != 0,
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn f() {
+    fn horizontal_sum4() {
         let a = pack(1.0, 2.0, 3.0, 4.0);
         let b = pack(5.0, 6.0, 7.0, 8.0);
         let c = pack(9.0, 10.0, 11.0, 12.0);
         let d = pack(13.0, 14.0, 15.0, 16.0);
-        println!("{:?}", unpack(horizontal_sum4(a, b, c, d)));
+        assert_eq!(
+            unpack(super::horizontal_sum4(a, b, c, d)),
+            (10.0, 26.0, 42.0, 58.0)
+        );
+    }
+
+    #[test]
+    fn rotate_right_1() {
+        let a = pack(1.0, 2.0, 3.0, 4.0);
+        assert_eq!(unpack(super::rotate_right_1(a)), (4.0, 1.0, 2.0, 3.0));
+    }
+
+    #[test]
+    fn rotate_right_2() {
+        let a = pack(1.0, 2.0, 3.0, 4.0);
+        assert_eq!(unpack(super::rotate_right_2(a)), (3.0, 4.0, 1.0, 2.0));
+    }
+
+    #[test]
+    fn rotate_right_3() {
+        let a = pack(1.0, 2.0, 3.0, 4.0);
+        assert_eq!(unpack(super::rotate_right_3(a)), (2.0, 3.0, 4.0, 1.0));
     }
 }

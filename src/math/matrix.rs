@@ -2,7 +2,7 @@ use std::ops::Mul;
 
 use super::{simd::Float4, vector::Vec2};
 
-/// A matrix with 1 row and 4 columsn.
+/// A matrix with 1 row and 4 columns.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Mat1x4 {
     pub r0: Float4,
@@ -17,10 +17,10 @@ impl Mat1x4 {
     }
 }
 
-impl Mul<Mat2x4> for Mat1x4 {
+impl Mul<Mat4x2> for Mat1x4 {
     type Output = Vec2;
 
-    fn mul(self, rhs: Mat2x4) -> Self::Output {
+    fn mul(self, rhs: Mat4x2) -> Self::Output {
         let r0 = self.r0 * rhs.c0;
         let r1 = self.r0 * rhs.c1;
         let (a, b) = Float4::horizontal_sum2(r0, r1);
@@ -43,13 +43,14 @@ impl Mul<Mat4x4> for Mat1x4 {
         }
     }
 }
-/// A matrix with 2 columns and 4 rows.
-pub struct Mat2x4 {
+
+/// A matrix with 4 rows and 2 columns.
+pub struct Mat4x2 {
     pub c0: Float4,
     pub c1: Float4,
 }
 
-impl Mat2x4 {
+impl Mat4x2 {
     #[rustfmt::skip]
     #[must_use]
     #[allow(clippy::too_many_arguments)]
@@ -144,6 +145,30 @@ impl Mat4x4 {
     }
 }
 
+impl Mul<Mat4x2> for Mat4x4 {
+    type Output = Mat4x2;
+
+    fn mul(self, rhs: Mat4x2) -> Self::Output {
+        let c0 = {
+            let r0 = self.r0 * rhs.c0;
+            let r1 = self.r1 * rhs.c0;
+            let r2 = self.r2 * rhs.c0;
+            let r3 = self.r3 * rhs.c0;
+            Float4::horizontal_sum4(r0, r1, r2, r3)
+        };
+
+        let c1 = {
+            let r0 = self.r0 * rhs.c1;
+            let r1 = self.r1 * rhs.c1;
+            let r2 = self.r2 * rhs.c1;
+            let r3 = self.r3 * rhs.c1;
+            Float4::horizontal_sum4(r0, r1, r2, r3)
+        };
+
+        Mat4x2 { c0, c1 }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::math::vector::Vec2;
@@ -152,7 +177,7 @@ mod tests {
     #[test]
     fn mul_1x4_2x4() {
         let a = Mat1x4::new(1.0, 2.0, 3.0, 4.0);
-        let b = Mat2x4::new(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0);
+        let b = Mat4x2::new(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0);
         let c = a * b;
         assert_eq!(c, Vec2::new(50.0, 60.0));
     }
