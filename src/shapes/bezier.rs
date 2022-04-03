@@ -3,7 +3,7 @@ use crate::{
     math::{
         cmp::ApproxEq,
         interp::Interpolate,
-        matrix::{Mat1x4, Mat2x4, Mat4x4},
+        matrix::{Mat1x4, Mat4x2, Mat4x4},
         simd::Float4,
     },
     utils::{
@@ -155,7 +155,7 @@ fn evaluate(bezier: &[Point; 4], t: f32) -> Point {
     );
 
     #[rustfmt::skip]
-    let p = Mat2x4::new(
+    let p = Mat4x2::new(
         bezier[0].x, bezier[0].y,
         bezier[1].x, bezier[1].y,
         bezier[2].x, bezier[2].y,
@@ -239,7 +239,7 @@ impl<'a> CurvePart<'a> {
     }
 
     fn get(&self) -> [Point; 4] {
-        split2(self.points, self.start, self.end).1
+        split2(self.points, self.start as f32, self.end as f32).1
     }
 
     fn split(&self, at: f32) -> (Self, Self) {
@@ -271,7 +271,7 @@ fn find_intersections_in_range(mut a: CurvePart, mut b: CurvePart) -> ArrayVec<(
     enum Result {
         Split,
         NoSplit,
-        NoIntersection
+        NoIntersection,
     }
 
     let calc = |curve: &mut CurvePart, against: &mut CurvePart| {
@@ -282,8 +282,7 @@ fn find_intersections_in_range(mut a: CurvePart, mut b: CurvePart) -> ArrayVec<(
 
         if curve.end < curve.start {
             Result::NoIntersection
-        }
-        else if initial_length * 0.8 < curve.length() {
+        } else if curve.length() > initial_length * 0.8 {
             Result::Split
         } else {
             Result::NoSplit
@@ -308,6 +307,11 @@ fn find_intersections_in_range(mut a: CurvePart, mut b: CurvePart) -> ArrayVec<(
             calc(&mut b, &mut a)
         };
 
+        if a.start.approx_eq(a.end) & b.start.approx_eq(b.end) {
+            intersections.push((a.start as f32, b.start as f32));
+            break;
+        }
+
         match needs_split {
             Result::Split => {
                 if a.length() > b.length() {
@@ -320,12 +324,13 @@ fn find_intersections_in_range(mut a: CurvePart, mut b: CurvePart) -> ArrayVec<(
                     intersections.extend(&find_intersections_in_range(a, right));
                 }
                 break;
-            },
-            Result::NoSplit => if a.start.approx_eq(a.end) & b.start.approx_eq(b.end) {
-                intersections.push((a.start, b.start));
+            }
+            Result::NoSplit => {
+                // no-op, continue
+            }
+            Result::NoIntersection => {
                 break;
             },
-            Result::NoIntersection => break,
         }
 
         num_iterations += 1;
@@ -475,21 +480,18 @@ mod tests {
                 left,
                 original
             );
-            // assert_eq!(left.at(t), bezier.at(t / 2.0));
         }
 
         for t in 0..50 {
             let t = t as f32 / 50.0;
             let right = right.at(t);
             let original = bezier.at(0.5 + t / 2.0);
-            // assert!(right.at(t).approx_eq(bezier.at(0.5 + t / 2.0)));
             assert!(
                 right.approx_eq(original),
                 "right: {:?}, original: {:?}",
                 right,
                 original
             );
-            // assert_eq!(right.at(t), bezier.at(0.5 + t / 2.0));
         }
     }
 
@@ -536,9 +538,35 @@ mod tests {
         let t = find_intersections(&curve1, &curve2);
         assert_eq!(t.len(), 2);
 
-        println!("{:?}:{:?}", super::evaluate(&curve1, t[0].0), super::evaluate(&curve2, t[0].1));
+        for &(left, right) in &t {
+            assert!(super::evaluate(&curve1, left)
+                .approx_eq_within(super::evaluate(&curve2, right), 0.001));
+        }
+    }
 
-        assert!(super::evaluate(&curve1, t[0].0).approx_eq(super::evaluate(&curve2, t[0].1)));
+    #[test]
+    fn three_intersections() {
+        let curve1 = [
+            Point::new(18.0, 122.0),
+            Point::new(15.0, 178.0),
+            Point::new(247.0, 173.0),
+            Point::new(251.0, 242.0),
+        ];
+
+        let curve2 = [
+            Point::new(20.0, 213.0),
+            Point::new(189.0, 40.0),
+            Point::new(85.0, 283.0),
+            Point::new(271.0, 217.0),
+        ];
+
+        let t = find_intersections(&curve1, &curve2);
+        assert_eq!(t.len(), 3);
+
+        for &(left, right) in &t {
+            assert!(super::evaluate(&curve1, left)
+                .approx_eq_within(super::evaluate(&curve2, right), 0.001));
+        }
     }
 
     #[test]

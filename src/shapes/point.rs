@@ -49,4 +49,8 @@ impl ApproxEq for Point {
     fn approx_eq(&self, other: Self) -> bool {
         self.x.approx_eq(other.x) && self.y.approx_eq(other.y)
     }
+
+    fn approx_eq_within(&self, other: Self, epsilon: f32) -> bool {
+        self.x.approx_eq_within(other.x, epsilon) && self.y.approx_eq_within(other.y, epsilon)
+    }
 }

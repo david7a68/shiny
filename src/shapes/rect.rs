@@ -1,6 +1,9 @@
-use std::fmt::Debug;
+use std::{fmt::Debug, ops::Add};
 
-use crate::math::simd::Float4;
+use crate::{
+    math::simd::Float4,
+    utils::cmp::{max, min},
+};
 
 #[derive(Clone, Copy)]
 #[repr(transparent)]
@@ -41,9 +44,29 @@ impl Rect {
     }
 }
 
+impl Default for Rect {
+    #[must_use]
+    fn default() -> Self {
+        Self::new(0.0, 0.0, 0.0, 0.0)
+    }
+}
+
 impl PartialEq for Rect {
     fn eq(&self, other: &Self) -> bool {
         self.0 == other.0
+    }
+}
+
+impl Add for Rect {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Self(Float4::new(
+            min!(self.left(), rhs.left()),
+            max!(self.right(), rhs.right()),
+            min!(self.top(), rhs.top()),
+            max!(self.bottom(), rhs.bottom()),
+        ))
     }
 }
 
