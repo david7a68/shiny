@@ -655,6 +655,36 @@ mod tests {
     }
 
     #[test]
+    fn nine_intersections() {
+        let curve1 = [
+            Point::new(108.0, 219.0),
+            Point::new(143.0, 16.0),
+            Point::new(121.0, 255.0),
+            Point::new(143.0, 136.0),
+        ];
+
+        let curve2 = [
+            Point::new(62.0, 156.0),
+            Point::new(267.0, 192.0),
+            Point::new(14.0, 125.0),
+            Point::new(156.0, 153.0),
+        ];
+
+        let t = find_intersections(&curve1, &curve2);
+        assert_eq!(t.len(), 9);
+
+        for &(left, right) in &t {
+            assert!(
+                super::evaluate(&curve1, left)
+                    .approx_eq_within(super::evaluate(&curve2, right), 0.001),
+                "left: {:?}, right: {:?}",
+                left,
+                right
+            );
+        }
+    }
+
+    #[test]
     fn clip() {
         let curve1 = Cubic {
             points: [
