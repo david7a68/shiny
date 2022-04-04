@@ -219,7 +219,13 @@ fn split2(bezier: &[Point; 4], t1: f32, t2: f32) -> ([Point; 4], [Point; 4], [Po
 /// `b`.
 #[must_use]
 pub fn find_intersections(a: &[Point; 4], b: &[Point; 4]) -> ArrayVec<(f32, f32), 9> {
-    find_intersections_in_range(CurvePart::new(a, 0.0, 1.0), CurvePart::new(b, 0.0, 1.0))
+    let mut intersections = ArrayVec::new();
+    find_intersections_in_range(
+        CurvePart::new(a, 0.0, 1.0),
+        CurvePart::new(b, 0.0, 1.0),
+        &mut intersections,
+    );
+    intersections
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -263,33 +269,23 @@ impl<'a> CurvePart<'a> {
 }
 
 /// Finds the intersections between two curves within the specified ranges.
-fn find_intersections_in_range(mut a: CurvePart, mut b: CurvePart) -> ArrayVec<(f32, f32), 9> {
-    let mut intersections = ArrayVec::new();
-    let mut num_iterations = 0;
-
-    #[derive(Debug)]
-    enum Result {
-        Split,
-        NoSplit,
-        NoIntersection,
-    }
-
-    let calc = |curve: &mut CurvePart, against: &mut CurvePart| {
+fn find_intersections_in_range(
+    mut a: CurvePart,
+    mut b: CurvePart,
+    intersections: &mut ArrayVec<(f32, f32), 9>,
+) {
+    fn calc(curve: &mut CurvePart, against: &CurvePart) -> f32 {
         let initial_length = curve.length();
 
         let (start, end) = clip(&curve.get(), &against.get());
         (curve.start, curve.end) = (curve.map_to_parent(start), curve.map_to_parent(end));
 
-        if curve.end < curve.start {
-            Result::NoIntersection
-        } else if curve.length() > initial_length * 0.8 {
-            Result::Split
-        } else {
-            Result::NoSplit
-        }
-    };
+        curve.length() / initial_length
+    }
 
+    let mut num_iterations = 0;
     loop {
+        println!("it");
         debug_assert!(a.is_valid());
         debug_assert!(b.is_valid());
 
@@ -301,42 +297,39 @@ fn find_intersections_in_range(mut a: CurvePart, mut b: CurvePart) -> ArrayVec<(
         );
 
         // Alternate between a and b
-        let needs_split = if (num_iterations & 1) == 0 {
-            calc(&mut a, &mut b)
+        let proportion_remaining = if (num_iterations & 1) == 0 {
+            calc(&mut a, &b)
         } else {
-            calc(&mut b, &mut a)
+            calc(&mut b, &a)
         };
 
-        if a.start.approx_eq(a.end) & b.start.approx_eq(b.end) {
-            intersections.push((a.start as f32, b.start as f32));
+        if proportion_remaining < 0.0 {
+            // There is no intersection in this region, so we can stop.
             break;
-        }
-
-        match needs_split {
-            Result::Split => {
-                if a.length() > b.length() {
-                    let (left, right) = a.split(0.5);
-                    intersections.extend(&find_intersections_in_range(left, b));
-                    intersections.extend(&find_intersections_in_range(right, b));
-                } else {
-                    let (left, right) = b.split(0.5);
-                    intersections.extend(&find_intersections_in_range(a, left));
-                    intersections.extend(&find_intersections_in_range(a, right));
-                }
-                break;
+        } else if proportion_remaining > 0.8 {
+            // The clip did not result in a significant reduction in the curve's
+            // length, so split the longest curve in half and look for
+            // intersections in each half.
+            if a.length() > b.length() {
+                let (left, right) = a.split(0.5);
+                find_intersections_in_range(left, b, intersections);
+                find_intersections_in_range(right, b, intersections);
+            } else {
+                let (left, right) = b.split(0.5);
+                find_intersections_in_range(a, left, intersections);
+                find_intersections_in_range(a, right, intersections);
             }
-            Result::NoSplit => {
-                // no-op, continue
-            }
-            Result::NoIntersection => {
-                break;
-            },
+            break;
+        } else if (a.length() + b.length()).approx_eq(0.0) {
+            // The combined curve errors are close enough to zero that we can
+            // safely say we've found the intersection.
+            intersections.push((a.start, b.start));
+            break;
+        } else {
+            num_iterations += 1;
+            continue;
         }
-
-        num_iterations += 1;
     }
-
-    intersections
 }
 
 /// Clips `a` against `b`, producing t-bounds where `a` lies within `b`'s fat
@@ -570,19 +563,39 @@ mod tests {
     }
 
     #[test]
+    fn coincident_angles() {
+        let curve1 = [
+            Point::new(50.0, 35.0),
+            Point::new(45.0, 235.0),
+            Point::new(220.0, 235.0),
+            Point::new(220.0, 135.0),
+        ];
+
+        let curve2 = [
+            Point::new(110.0, 209.0),
+            Point::new(17.0, 56.0),
+            Point::new(56.0, 55.0),
+            Point::new(93.0, 158.0),
+        ];
+
+        let t = find_intersections(&curve1, &curve2);
+        assert_eq!(t.len(), 3);
+    }
+
+    #[test]
     fn four_intersections() {
         let curve1 = [
             Point::new(236.0, 200.0),
             Point::new(52.0, 76.0),
             Point::new(157.0, 233.0),
-            Point::new(264.0, 160.0)
+            Point::new(264.0, 160.0),
         ];
 
         let curve2 = [
             Point::new(57.0, 172.0),
             Point::new(202.0, 255.0),
             Point::new(236.0, 0.0),
-            Point::new(112.0, 229.0)
+            Point::new(112.0, 229.0),
         ];
 
         let t = find_intersections(&curve1, &curve2);
