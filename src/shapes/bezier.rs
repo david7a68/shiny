@@ -256,7 +256,7 @@ impl<'a> CurvePart<'a> {
         )
     }
 
-    fn map_to_parent(&self, t: f32) -> f32 {
+    fn map_to_original(&self, t: f32) -> f32 {
         debug_assert!((0.0..=1.0).contains(&t));
         self.start + (t * (self.end - self.start))
     }
@@ -278,14 +278,13 @@ fn find_intersections_in_range(
         let initial_length = curve.length();
 
         let (start, end) = clip(&curve.get(), &against.get());
-        (curve.start, curve.end) = (curve.map_to_parent(start), curve.map_to_parent(end));
+        (curve.start, curve.end) = (curve.map_to_original(start), curve.map_to_original(end));
 
         curve.length() / initial_length
     }
 
     let mut num_iterations = 0;
     loop {
-        println!("it");
         debug_assert!(a.is_valid());
         debug_assert!(b.is_valid());
 
@@ -306,6 +305,11 @@ fn find_intersections_in_range(
         if proportion_remaining < 0.0 {
             // There is no intersection in this region, so we can stop.
             break;
+        } else if (a.length() + b.length()).approx_eq(0.0) {
+            // The combined curve errors are close enough to zero that we can
+            // safely say we've found the intersection.
+            intersections.push((a.start, b.start));
+            break;
         } else if proportion_remaining > 0.8 {
             // The clip did not result in a significant reduction in the curve's
             // length, so split the longest curve in half and look for
@@ -320,11 +324,6 @@ fn find_intersections_in_range(
                 find_intersections_in_range(a, right, intersections);
             }
             break;
-        } else if (a.length() + b.length()).approx_eq(0.0) {
-            // The combined curve errors are close enough to zero that we can
-            // safely say we've found the intersection.
-            intersections.push((a.start, b.start));
-            break;
         } else {
             num_iterations += 1;
             continue;
@@ -335,27 +334,60 @@ fn find_intersections_in_range(
 /// Clips `a` against `b`, producing t-bounds where `a` lies within `b`'s fat
 /// line.
 fn clip(curve: &[Point; 4], against: &[Point; 4]) -> (f32, f32) {
-    let (min_line, max_line) = {
-        let (low, high) = fat_line(against);
-        (-low, high)
+    let parallel = {
+        let (min_line, max_line) = {
+            let (low, high) = fat_line_parallel(against);
+            (-low, high)
+        };
+
+        let min_clip = clip_line(curve, &min_line);
+        let max_clip = clip_line(curve, &max_line);
+        (max!(min_clip.0, max_clip.0), min!(min_clip.1, max_clip.1))
     };
 
-    let min_clip = clip_line(curve, &min_line);
-    let max_clip = clip_line(curve, &max_line);
-    (max!(min_clip.0, max_clip.0), min!(min_clip.1, max_clip.1))
+    let perpendicular = {
+        let (min_line, max_line) = {
+            let (low, high) = fat_line_perpendicular(against);
+            (-low, high)
+        };
+
+        let min_clip = clip_line(curve, &min_line);
+        let max_clip = clip_line(curve, &max_line);
+        (max!(min_clip.0, max_clip.0), min!(min_clip.1, max_clip.1))
+    };
+
+    if (perpendicular.1 - perpendicular.0).abs() < (parallel.1 - parallel.0).abs() {
+        perpendicular
+    } else {
+        parallel
+    }
 }
 
 /// Calculates the two lines that bound the curve. This is currently done using
 /// only the control points. A more refined method using inflection points may
 /// or may not improve performance (extra work per curve for possibly fewer
 /// clipping operations).
-fn fat_line(curve: &[Point; 4]) -> (Line, Line) {
+fn fat_line_parallel(curve: &[Point; 4]) -> (Line, Line) {
     let thin = Line::between(curve[0], curve[3]);
     let line1 = thin.parallel_through(curve[1]);
     let line2 = thin.parallel_through(curve[2]);
+
     let min_c = min!(thin.c, line1.c, line2.c);
     let max_c = max!(thin.c, line1.c, line2.c);
     (Line::with_c(thin, min_c), Line::with_c(thin, max_c))
+}
+
+fn fat_line_perpendicular(curve: &[Point; 4]) -> (Line, Line) {
+    let thin = Line::between(curve[0], curve[3]);
+    let line0 = thin.perpendicular_through(curve[0]);
+    let line1 = thin.perpendicular_through(curve[1]);
+    let line2 = thin.perpendicular_through(curve[2]);
+    let line3 = thin.perpendicular_through(curve[3]);
+
+    (
+        Line::with_c(line0, min!(line0.c, line1.c, line2.c, line3.c)),
+        Line::with_c(line0, max!(line0.c, line1.c, line2.c, line3.c)),
+    )
 }
 
 /// Clips `curve` against `line`, returning a t-bound that is guaranteed to
@@ -532,8 +564,13 @@ mod tests {
         assert_eq!(t.len(), 2);
 
         for &(left, right) in &t {
-            assert!(super::evaluate(&curve1, left)
-                .approx_eq_within(super::evaluate(&curve2, right), 0.001));
+            assert!(
+                super::evaluate(&curve1, left)
+                    .approx_eq_within(super::evaluate(&curve2, right), 0.001),
+                "left: {:?}, right: {:?}",
+                left,
+                right
+            );
         }
     }
 
@@ -557,8 +594,13 @@ mod tests {
         assert_eq!(t.len(), 3);
 
         for &(left, right) in &t {
-            assert!(super::evaluate(&curve1, left)
-                .approx_eq_within(super::evaluate(&curve2, right), 0.001));
+            assert!(
+                super::evaluate(&curve1, left)
+                    .approx_eq_within(super::evaluate(&curve2, right), 0.001),
+                "left: {:?}, right: {:?}",
+                left,
+                right
+            );
         }
     }
 
@@ -602,8 +644,13 @@ mod tests {
         assert_eq!(t.len(), 4);
 
         for &(left, right) in &t {
-            assert!(super::evaluate(&curve1, left)
-                .approx_eq_within(super::evaluate(&curve2, right), 0.001));
+            assert!(
+                super::evaluate(&curve1, left)
+                    .approx_eq_within(super::evaluate(&curve2, right), 0.001),
+                "left: {:?}, right: {:?}",
+                left,
+                right
+            );
         }
     }
 
@@ -642,7 +689,7 @@ mod tests {
         };
 
         let thin = Line::between(curve.points[0], curve.points[3]);
-        let (low, high) = super::fat_line(&curve.points);
+        let (low, high) = super::fat_line_parallel(&curve.points);
 
         assert!(low.c.approx_eq(40.70803));
         assert!(high.c.approx_eq(151.37787));

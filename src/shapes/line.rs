@@ -87,6 +87,13 @@ impl Line {
             c,
         }
     }
+
+    #[must_use]
+    pub fn perpendicular_through(&self, point: Point) -> Self {
+        let slope = 1.0 / (self.a / self.b);
+        let offset = -(slope * point.x) + point.y;
+        Self::new(slope, -1.0, offset)
+    }
 }
 
 impl Neg for Line {
@@ -148,6 +155,16 @@ mod tests {
             assert_eq!(line.y_at(6.0).unwrap().y, 2.0);
             assert_eq!(line.y_at(100.0).unwrap().y, 2.0);
         }
+    }
+
+    #[test]
+    fn perpendicular_through() {
+        let line1 = Line::between(Point::new(2.0, 2.0), Point::new(6.0, 4.0));
+        let line2 = line1.perpendicular_through(Point::new(4.0, 4.0));
+
+        let angle = f32::atan((line2.a * line1.b - line1.a * line2.b) / (line1.a * line2.a + line1.b * line2.b));
+        println!("{} : {}", angle.abs(), std::f32::consts::FRAC_PI_2);
+        assert!(angle.abs().approx_eq(std::f32::consts::FRAC_PI_2));
     }
 
     #[test]
