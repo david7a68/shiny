@@ -570,6 +570,31 @@ mod tests {
     }
 
     #[test]
+    fn four_intersections() {
+        let curve1 = [
+            Point::new(236.0, 200.0),
+            Point::new(52.0, 76.0),
+            Point::new(157.0, 233.0),
+            Point::new(264.0, 160.0)
+        ];
+
+        let curve2 = [
+            Point::new(57.0, 172.0),
+            Point::new(202.0, 255.0),
+            Point::new(236.0, 0.0),
+            Point::new(112.0, 229.0)
+        ];
+
+        let t = find_intersections(&curve1, &curve2);
+        assert_eq!(t.len(), 4);
+
+        for &(left, right) in &t {
+            assert!(super::evaluate(&curve1, left)
+                .approx_eq_within(super::evaluate(&curve2, right), 0.001));
+        }
+    }
+
+    #[test]
     fn clip() {
         let curve1 = Cubic {
             points: [
