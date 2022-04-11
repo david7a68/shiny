@@ -1,16 +1,13 @@
-pub mod cpu_image;
-pub mod pixel_buffer;
-
 use crate::color::Color;
-use pixel_buffer::PixelBuffer;
+use crate::pixel_buffer::PixelBuffer;
 
 /// Represents a handle to an image with a given color space and pixel format.
 ///
 /// e.g.:
 /// ```rust
-/// # use shiny::image::cpu_image::CpuImage;
+/// # use shiny::pixel_buffer::PixelBuffer;
 /// # use shiny::color::Srgb8;
-/// type SrgbCpuImage = CpuImage<Srgb8>;
+/// type SrgbPixelBuffer = PixelBuffer<Srgb8>;
 /// ```
 pub trait Image<C: Color> {
     /// The width of the image.

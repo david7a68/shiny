@@ -1,7 +1,7 @@
 pub mod png;
 
 pub fn write_png<C: self::png::PngColor>(
-    pixels: shiny::image::pixel_buffer::PixelBuffer<C>,
+    pixels: shiny::pixel_buffer::PixelBuffer<C>,
     filename: &str,
 ) {
     use self::png::encode_png;

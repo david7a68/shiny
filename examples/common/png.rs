@@ -2,7 +2,8 @@ use std::io::Write;
 
 use shiny::{
     color::{Color, Rgb, Rgba, Srgb8, Srgba8},
-    image::pixel_buffer::PixelBuffer,
+    image::Image,
+    pixel_buffer::PixelBuffer,
 };
 
 /// Encodes a [`PixelBuffer`] and write it into a [`Write`]r.
@@ -29,7 +30,7 @@ pub trait PngColor: Color {
 
     /// Encodes a single color satisfying the format described in
     /// `encode_color_information()`.
-    fn encode<'a, W: Write>(&self, writer: W) -> W;
+    fn encode<W: Write>(&self, writer: W) -> W;
 }
 
 impl PngColor for Srgb8 {
@@ -39,7 +40,7 @@ impl PngColor for Srgb8 {
         encoder.set_srgb(png::SrgbRenderingIntent::AbsoluteColorimetric);
     }
 
-    fn encode<'a, W: Write>(&self, mut writer: W) -> W {
+    fn encode<W: Write>(&self, mut writer: W) -> W {
         let slice = unsafe {
             std::slice::from_raw_parts(
                 &self.color as *const Rgb<u8> as *const u8,
@@ -58,7 +59,7 @@ impl PngColor for Srgba8 {
         encoder.set_srgb(png::SrgbRenderingIntent::AbsoluteColorimetric);
     }
 
-    fn encode<'a, W: Write>(&self, mut writer: W) -> W {
+    fn encode<W: Write>(&self, mut writer: W) -> W {
         let slice = unsafe {
             std::slice::from_raw_parts(
                 &self.color as *const Rgba<u8, u8> as *const u8,

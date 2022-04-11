@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use crate::color::Color;
+use crate::{color::Color, image::Image};
 
 /// A copy-on-write buffer of pixels.
 #[derive(Clone)]
@@ -16,16 +16,6 @@ impl<C: Color> PixelBuffer<C> {
         }
     }
 
-    #[must_use]
-    pub fn width(&self) -> u32 {
-        self.raw.width()
-    }
-
-    #[must_use]
-    pub fn height(&self) -> u32 {
-        self.raw.height()
-    }
-
     /// Retrieves the color of a single pixel.
     #[must_use]
     pub fn get(&self, x: u32, y: u32) -> C {
@@ -35,7 +25,9 @@ impl<C: Color> PixelBuffer<C> {
     /// Sets the color of a single pixel, copying the buffer if other owning
     /// references exist.
     pub fn set(&mut self, x: u32, y: u32, color: C) {
-        Rc::make_mut(&mut self.raw).set(x, y, color);
+        if (x < self.width()) & (y < self.height()) {
+            Rc::make_mut(&mut self.raw).set(x, y, color);
+        }
     }
 
     /// Retrieves an entire row of pixels.
@@ -62,6 +54,26 @@ impl<C: Color> PixelBuffer<C> {
     #[must_use]
     pub fn pixels_mut(&mut self) -> &mut [C] {
         Rc::make_mut(&mut self.raw).pixels_mut()
+    }
+
+    pub fn clear(&mut self, color: C) {
+        for px in self.pixels_mut() {
+            *px = color;
+        }
+    }
+}
+
+impl<C: Color> Image<C> for PixelBuffer<C> {
+    fn width(&self) -> u32 {
+        self.raw.width()
+    }
+
+    fn height(&self) -> u32 {
+        self.raw.height()
+    }
+
+    fn get_pixels(&self) -> PixelBuffer<C> {
+        self.clone()
     }
 }
 

@@ -2,7 +2,8 @@ mod common;
 
 use shiny::{
     color::{Rgb, Srgb8},
-    image::{cpu_image::CpuImage, Image},
+    image::Image,
+    pixel_buffer::PixelBuffer,
     shapes::{
         bezier::{Bezier, CubicSlice},
         point::Point,
@@ -12,7 +13,7 @@ use shiny::{
 use common::write_png;
 
 fn main() {
-    let mut image = CpuImage::new(200, 200);
+    let mut image = PixelBuffer::new(200, 200);
     image.clear(Srgb8 {
         color: Rgb {
             r: 255,

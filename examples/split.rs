@@ -2,7 +2,8 @@ mod common;
 
 use shiny::{
     color::{Color, Rgb, Srgb8},
-    image::{cpu_image::CpuImage, Image},
+    image::Image,
+    pixel_buffer::PixelBuffer,
     shapes::{
         bezier::{Bezier, CubicSlice},
         point::Point,
@@ -20,7 +21,7 @@ fn main() {
     ];
     let curve = CubicSlice::new(&points);
 
-    let mut image = CpuImage::new(200, 200);
+    let mut image = PixelBuffer::new(200, 200);
 
     let (left, right) = curve.split(0.0);
 
@@ -47,7 +48,13 @@ fn main() {
     write_png(image.get_pixels(), module_path!());
 }
 
-fn draw_curve<C: Color>(curve: &CubicSlice, from: f32, to: f32, color: C, image: &mut CpuImage<C>) {
+fn draw_curve<C: Color>(
+    curve: &CubicSlice,
+    from: f32,
+    to: f32,
+    color: C,
+    image: &mut PixelBuffer<C>,
+) {
     let mut t = from;
     let d = 0.001;
     loop {

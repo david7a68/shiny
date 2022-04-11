@@ -1,3 +1,6 @@
+pub type Srgb8 = Standard<Rgb<u8>>;
+pub type Srgba8 = Standard<Rgba<u8, u8>>;
+
 pub trait Color: Copy {
     type Component;
     type Alpha;
@@ -143,6 +146,3 @@ impl<C: Raw> Color for Standard<C> {
         self.color.alpha()
     }
 }
-
-pub type Srgb8 = Standard<Rgb<u8>>;
-pub type Srgba8 = Standard<Rgba<u8, u8>>;

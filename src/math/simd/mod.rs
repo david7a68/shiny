@@ -193,15 +193,28 @@ impl Float4 {
         arch::equal(self.0, rhs.0)
     }
 
+    /// Rotates the vector elements by the given amount. This is semantically equivalent to the following:
+    ///
+    /// ```rust
+    /// fn rotate_right(v: (f32, f32, f32, f32), amount: usize) -> (f32, f32, f32, f32) {
+    ///     match amount & 0b11 {
+    ///         0 => v,
+    ///         1 => (v.3, v.0, v.1, v.2),
+    ///         2 => (v.2, v.3, v.0, v.1),
+    ///         3 => (v.1, v.2, v.3, v.0),
+    ///         _ => unreachable!(),
+    ///     }
+    /// }
+    /// ```
     #[must_use]
     #[inline(always)]
     pub fn rotate_right(&self, amount: usize) -> Self {
-        match amount {
+        match amount & 0b11 {
             0 => *self,
             1 => Self(arch::rotate_right_1(self.0)),
             2 => Self(arch::rotate_right_2(self.0)),
             3 => Self(arch::rotate_right_3(self.0)),
-            _ => panic!("rotate_right: amount must be between 0 and 3"),
+            _ => unreachable!(),
         }
     }
 }

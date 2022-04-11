@@ -117,10 +117,9 @@ fn find_intersections_in_range(
                 find_intersections_in_range(a, right, intersections);
             }
             break;
-        } else {
-            num_iterations += 1;
-            continue;
         }
+
+        num_iterations += 1;
     }
 }
 

@@ -1,10 +1,17 @@
 mod common;
 use common::*;
 
-use shiny::{shapes::{
-    path::{Builder as PathBuilder, Path},
-    point::Point, bezier::Bezier,
-}, image::{cpu_image::CpuImage, Image}, color::{Srgb8, Rgb}, math::vector::Vec2};
+use shiny::{
+    color::{Rgb, Srgb8},
+    image::Image,
+    math::vector::Vec2,
+    pixel_buffer::PixelBuffer,
+    shapes::{
+        bezier::Bezier,
+        path::{Builder as PathBuilder, Path},
+        point::Point,
+    },
+};
 
 fn main() {
     // let file = std::fs::read_to_string("./test_files/tiger.svg").unwrap();
@@ -12,7 +19,7 @@ fn main() {
 
     let paths = read_svg(&file);
 
-    let mut image = CpuImage::new(4000, 2000);
+    let mut image = PixelBuffer::new(4000, 2000);
     image.clear(Srgb8 {
         color: Rgb { r: 0, g: 0, b: 0 },
     });
@@ -34,7 +41,7 @@ fn main() {
                     if t >= 1.0 {
                         break;
                     }
-    
+
                     let p = curve.at(t) + Vec2::new(100.0, 100.0);
                     image.set(p.x.round() as u32, p.y.round() as u32, color);
                     t += delta;
@@ -70,11 +77,13 @@ fn read_svg(data: &str) -> Vec<Path> {
                         path.move_to(Point::new(4.0 * x as f32, 4.0 * y as f32));
                     }
                     svgtypes::PathSegment::LineTo { abs, x, y } => {
-                        path.line_to(Point::new(4.0 * x as f32, 4.0 * y as f32)).unwrap();
+                        path.line_to(Point::new(4.0 * x as f32, 4.0 * y as f32))
+                            .unwrap();
                     }
                     svgtypes::PathSegment::HorizontalLineTo { abs, x } => {
                         if let Some(cursor) = path.cursor() {
-                            path.line_to(Point::new(4.0 * x as f32, 4.0 * cursor.y as f32)).unwrap();
+                            path.line_to(Point::new(4.0 * x as f32, 4.0 * cursor.y as f32))
+                                .unwrap();
                         } else {
                             // Bad Path... skip this path.
                             println!("Bad Path (horizontal)");
@@ -83,7 +92,8 @@ fn read_svg(data: &str) -> Vec<Path> {
                     }
                     svgtypes::PathSegment::VerticalLineTo { abs, y } => {
                         if let Some(cursor) = path.cursor() {
-                            path.line_to(Point::new(4.0 * cursor.x as f32, 4.0 * y as f32)).unwrap();
+                            path.line_to(Point::new(4.0 * cursor.x as f32, 4.0 * y as f32))
+                                .unwrap();
                         } else {
                             // Bad Path... skip this path.
                             println!("Bad Path (vertical)");
@@ -103,7 +113,8 @@ fn read_svg(data: &str) -> Vec<Path> {
                             Point::new(4.0 * x1 as f32, 4.0 * y1 as f32),
                             Point::new(4.0 * x2 as f32, 4.0 * y2 as f32),
                             Point::new(4.0 * x as f32, 4.0 * y as f32),
-                        ).unwrap();
+                        )
+                        .unwrap();
                     }
                     svgtypes::PathSegment::SmoothCurveTo { abs, x2, y2, x, y } => {
                         println!("smooth cubic");
@@ -131,7 +142,7 @@ fn read_svg(data: &str) -> Vec<Path> {
                     }
                 }
             }
-            
+
             paths.push(path.build());
         }
     }
