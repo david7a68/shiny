@@ -45,6 +45,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "metrohash"
+version = "1.0.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3ba553cb19e2acbc54baa16faef215126243fe45e53357a3b2e9f4ebc7b0506c"
+
+[[package]]
 name = "miniz_oxide"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -78,6 +84,7 @@ dependencies = [
 name = "shiny"
 version = "0.1.0"
 dependencies = [
+ "metrohash",
  "png",
  "roxmltree",
  "svgtypes",

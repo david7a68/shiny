@@ -3,6 +3,13 @@ name = "shiny"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+default = ["backend-software"]
+backend-software = []
+
+[dependencies]
+metrohash = "1.0.6"
+
 [dev-dependencies]
 png = "0.17.5"
 svgtypes = "0.8.0"

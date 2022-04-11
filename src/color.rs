@@ -1,7 +1,9 @@
+use std::hash::Hash;
+
 pub type Srgb8 = Standard<Rgb<u8>>;
 pub type Srgba8 = Standard<Rgba<u8, u8>>;
 
-pub trait Color: Copy {
+pub trait Color: Copy + Hash {
     type Component;
     type Alpha;
 
@@ -19,7 +21,7 @@ pub trait Color: Copy {
 
 pub trait Raw: Color {}
 
-pub trait Component: Copy {
+pub trait Component: Copy + Hash {
     const MAX: Self;
     const ZERO: Self;
     const BIT_DEPTH: usize;
@@ -31,7 +33,7 @@ impl Component for u8 {
     const BIT_DEPTH: usize = 8;
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Hash)]
 pub struct Rgb<C: Component> {
     pub r: C,
     pub g: C,
@@ -71,7 +73,7 @@ impl<C: Component> Color for Rgb<C> {
     fn alpha(&self) -> Self::Alpha {}
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Hash)]
 pub struct Rgba<C: Component, A: Component> {
     pub r: C,
     pub g: C,
@@ -116,7 +118,7 @@ impl<C: Component, A: Component> Color for Rgba<C, A> {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Hash)]
 #[repr(transparent)]
 pub struct Standard<C: Raw> {
     pub color: C,

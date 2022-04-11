@@ -7,7 +7,16 @@ pub struct Paint<C: Color> {
     _phantom: PhantomData<C>,
 }
 
-#[derive(Clone, Debug)]
+impl <C: Color> Paint<C> {
+    pub (crate) fn new(handle: u64) -> Self {
+        Paint {
+            handle,
+            _phantom: PhantomData,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct PaintConfig<C: Color> {
     pub fill_color: C,
     pub stroke_color: C,
