@@ -266,7 +266,7 @@ mod test {
                     Point { x: 247.0, y: 173.0 },
                     Point { x: 251.0, y: 242.0 },
                 ],
-                num_intersections: 1
+                num_intersections: 1,
             },
             Pair {
                 curve1: [
@@ -281,7 +281,7 @@ mod test {
                     Point::new(187.0, 98.0),
                     Point::new(119.0, 247.0),
                 ],
-                num_intersections: 2
+                num_intersections: 2,
             },
             Pair {
                 curve1: [
@@ -296,7 +296,7 @@ mod test {
                     Point::new(56.0, 55.0),
                     Point::new(93.0, 158.0),
                 ],
-                num_intersections: 3
+                num_intersections: 3,
             },
             Pair {
                 curve1: [
@@ -311,7 +311,7 @@ mod test {
                     Point::new(236.0, 0.0),
                     Point::new(112.0, 229.0),
                 ],
-                num_intersections: 4
+                num_intersections: 4,
             },
             Pair {
                 curve1: [
@@ -326,7 +326,7 @@ mod test {
                     Point::new(14.0, 125.0),
                     Point::new(156.0, 153.0),
                 ],
-                num_intersections: 9
+                num_intersections: 9,
             },
         ];
 

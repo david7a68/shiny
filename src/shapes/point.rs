@@ -1,4 +1,4 @@
-use std::ops::{Sub, Add};
+use std::ops::{Add, Sub};
 
 use crate::math::{cmp::ApproxEq, interp::Interpolate, vector::Vec2};
 
