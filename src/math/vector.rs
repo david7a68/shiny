@@ -1,5 +1,7 @@
 use std::ops::{Add, Div, Mul, Sub};
 
+use super::cmp::ApproxEq;
+
 /// A vector in 2D space.
 #[derive(Clone, Copy, Default, PartialEq)]
 #[allow(non_camel_case_types)]
@@ -87,11 +89,46 @@ impl Sub<Vec2> for Vec2 {
     }
 }
 
+impl ApproxEq<&Self> for Vec2 {
+    #[inline]
+    #[must_use]
+    fn approx_eq(&self, other: &Self) -> bool {
+        self.0.approx_eq(other.0) && self.1.approx_eq(other.1)
+    }
+
+    #[inline]
+    #[must_use]
+    fn approx_eq_within(&self, other: &Self, epsilon: f32) -> bool {
+        self.0.approx_eq_within(other.0, epsilon) && self.1.approx_eq_within(other.1, epsilon)
+    }
+}
+
 impl std::fmt::Debug for Vec2 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("vec2")
             .field("x", &self.x())
             .field("y", &self.y())
             .finish()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn subtraction() {
+        let a = Vec2::new(1.0, 2.0);
+        let b = Vec2::new(3.0, 4.0);
+
+        assert!((a - b).approx_eq(&Vec2::new(-2.0, -2.0)));
+    }
+
+    #[test]
+    fn multiplication() {
+        {
+            let a = Vec2::new(1.0, 2.0);
+            assert!((a * 2.0).approx_eq(&Vec2::new(2.0, 4.0)));
+        }
     }
 }

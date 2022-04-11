@@ -5,3 +5,5 @@ edition = "2021"
 
 [dev-dependencies]
 png = "0.17.5"
+svgtypes = "0.8.0"
+roxmltree = "0.14.1"

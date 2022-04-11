@@ -30,6 +30,7 @@ pub trait Bezier: Sized {
 }
 
 /// A cubic bezier curve.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Cubic {
     pub points: [Point; 4],
 }

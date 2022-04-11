@@ -10,7 +10,8 @@ use shiny::{
 
 fn main() {
     let path = {
-        let mut builder = Builder::new(Point::new(0.0, 100.0));
+        let mut builder = Builder::default();
+        builder.move_to(Point::new(0.0, 100.0));
         builder.add_cubic(
             Point::new(10.0, 50.0),
             Point::new(100.0, 100.0),

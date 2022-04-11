@@ -1,4 +1,4 @@
-use std::ops::Sub;
+use std::ops::{Sub, Add};
 
 use crate::math::{cmp::ApproxEq, interp::Interpolate, vector::Vec2};
 
@@ -27,6 +27,13 @@ impl Sub<Point> for Point {
     type Output = Vec2;
     fn sub(self, rhs: Point) -> Self::Output {
         Vec2::new(self.x - rhs.x, self.y - rhs.y)
+    }
+}
+
+impl Add<Vec2> for Point {
+    type Output = Self;
+    fn add(self, rhs: Vec2) -> Self::Output {
+        Self::new(self.x + rhs.x(), self.y + rhs.y())
     }
 }
 
