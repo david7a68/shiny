@@ -1,6 +1,5 @@
 use crate::{
     color::{Color, Space as ColorSpace},
-    math::ops::Normalize,
     pixel_buffer::PixelBuffer,
 };
 
