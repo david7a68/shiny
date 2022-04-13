@@ -1,10 +1,10 @@
-use std::{hash::{Hasher, BuildHasher}};
+use std::hash::{BuildHasher, Hasher};
 
 use metrohash::MetroHash64;
 
 #[derive(Default)]
 pub struct PassThroughHasher {
-    value: u64
+    value: u64,
 }
 
 impl Hasher for PassThroughHasher {
@@ -12,7 +12,7 @@ impl Hasher for PassThroughHasher {
         self.value
     }
 
-    fn write(&mut self, bytes: &[u8]) {
+    fn write(&mut self, _bytes: &[u8]) {
         unimplemented!()
     }
 

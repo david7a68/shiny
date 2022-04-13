@@ -1,8 +1,8 @@
 mod common;
 
 use shiny::{
-    color::{Rgb, Srgb8},
-    image::Image,
+    color::{Color, Space as ColorSpace},
+    image::{Image, PixelFormat},
     pixel_buffer::PixelBuffer,
     shapes::{
         bezier::{Bezier, CubicSlice},
@@ -13,14 +13,8 @@ use shiny::{
 use common::write_png;
 
 fn main() {
-    let mut image = PixelBuffer::new(200, 200);
-    image.clear(Srgb8 {
-        color: Rgb {
-            r: 255,
-            g: 255,
-            b: 255,
-        },
-    });
+    let mut image = PixelBuffer::new(200, 200, PixelFormat::Rgba8, ColorSpace::Srgb).unwrap();
+    image.clear(Color::auto(1.0, 1.0, 1.0, 1.0));
 
     let points = [
         Point::new(50.0, 10.0),
@@ -30,9 +24,7 @@ fn main() {
     ];
     let curve = CubicSlice::new(&points);
 
-    let color = Srgb8 {
-        color: Rgb { r: 255, g: 0, b: 0 },
-    };
+    let color = Color::auto(1.0, 0.0, 0.0, 1.0);
 
     let mut t = 0.0;
     let delta = 0.001;

@@ -1,8 +1,8 @@
 use super::{point::Point, rect::Rect};
 use crate::{
     math::{
-        interp::Interpolate,
         matrix::{Mat1x4, Mat4x2, Mat4x4},
+        ops::Interpolate,
         simd::Float4,
     },
     utils::arrayvec::ArrayVec,

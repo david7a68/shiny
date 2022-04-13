@@ -2,8 +2,8 @@ mod common;
 use common::*;
 
 use shiny::{
-    color::{Rgb, Srgb8},
-    image::Image,
+    color::{Color, Space as ColorSpace},
+    image::{Image, PixelFormat},
     math::vector::Vec2,
     pixel_buffer::PixelBuffer,
     shapes::{
@@ -19,18 +19,10 @@ fn main() {
 
     let paths = read_svg(&file);
 
-    let mut image = PixelBuffer::new(4000, 2000);
-    image.clear(Srgb8 {
-        color: Rgb { r: 0, g: 0, b: 0 },
-    });
+    let mut image = PixelBuffer::new(4000, 2000, PixelFormat::Rgba8, ColorSpace::Srgb).unwrap();
+    image.clear(Color::auto(0.0, 0.0, 0.0, 1.0));
 
-    let color = Srgb8 {
-        color: Rgb {
-            r: 100,
-            g: 200,
-            b: 239,
-        },
-    };
+    let color = Color::auto(0.5, 0.8, 0.9, 1.0);
 
     for path in paths {
         for segment in path.iter() {
@@ -51,6 +43,8 @@ fn main() {
     }
 
     write_png(image.get_pixels(), module_path!());
+    let linear = image.convert(PixelFormat::Rgb10a2, ColorSpace::LinearSrgb);
+    write_png(linear.get_pixels(), "hahaha");
 }
 
 fn read_svg(data: &str) -> Vec<Path> {

@@ -3,8 +3,8 @@ mod common;
 use common::write_png;
 
 use shiny::{
-    color::{Rgb, Srgb8},
-    image::Image,
+    color::{Color, Space as ColorSpace},
+    image::{Image, PixelFormat},
     pixel_buffer::PixelBuffer,
     shapes::{bezier::Bezier, path::Builder, point::Point},
 };
@@ -44,18 +44,9 @@ fn main() {
         builder.build()
     };
 
-    let mut image = PixelBuffer::new(200, 200);
-    image.clear(Srgb8 {
-        color: Rgb { r: 0, g: 0, b: 0 },
-    });
+    let mut image = PixelBuffer::new(200, 200, PixelFormat::Rgba8, ColorSpace::Srgb).unwrap();
 
-    let color = Srgb8 {
-        color: Rgb {
-            r: 100,
-            g: 200,
-            b: 239,
-        },
-    };
+    let color = Color::auto(80.0, 0.8, 0.9, 1.0);
 
     for segment in path.iter() {
         for curve in segment {

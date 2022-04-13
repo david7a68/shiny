@@ -4,7 +4,11 @@
 
 use std::rc::Rc;
 
-use crate::{canvas::Canvas, color::Color};
+use crate::{
+    canvas::Canvas,
+    color::Space as ColorSpace,
+    image::{Error as ImageError, PixelFormat},
+};
 
 use self::canvas::SoftwareCanvas;
 
@@ -21,8 +25,14 @@ impl Software {
         }
     }
 
-    pub fn new_canvas<C: Color>(&mut self, width: u32, height: u32) -> impl Canvas<C> {
-        SoftwareCanvas::new(width, height, self.shared.clone())
+    pub fn new_canvas(
+        &mut self,
+        width: u32,
+        height: u32,
+        format: PixelFormat,
+        color_space: ColorSpace,
+    ) -> Result<impl Canvas, ImageError> {
+        SoftwareCanvas::new(width, height, format, color_space, self.shared.clone())
     }
 }
 

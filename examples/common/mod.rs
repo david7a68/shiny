@@ -1,9 +1,6 @@
 pub mod png;
 
-pub fn write_png<C: self::png::PngColor>(
-    pixels: shiny::pixel_buffer::PixelBuffer<C>,
-    filename: &str,
-) {
+pub fn write_png(pixels: shiny::pixel_buffer::PixelBuffer, filename: &str) {
     use self::png::encode_png;
     use std::fs::File;
 

@@ -1,23 +1,17 @@
-use std::marker::PhantomData;
-
 use crate::color::Color;
 
-pub struct Paint<C: Color> {
+pub struct Paint {
     pub handle: u64,
-    _phantom: PhantomData<C>,
 }
 
-impl <C: Color> Paint<C> {
-    pub (crate) fn new(handle: u64) -> Self {
-        Paint {
-            handle,
-            _phantom: PhantomData,
-        }
+impl Paint {
+    pub(crate) fn new(handle: u64) -> Self {
+        Paint { handle }
     }
 }
 
-#[derive(Clone, Debug, Hash, PartialEq, Eq)]
-pub struct PaintConfig<C: Color> {
-    pub fill_color: C,
-    pub stroke_color: C,
+#[derive(Clone, Debug, Hash, PartialEq)]
+pub struct PaintConfig {
+    pub fill_color: Color,
+    pub stroke_color: Color,
 }

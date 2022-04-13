@@ -1,6 +1,6 @@
 use std::ops::{Add, Sub};
 
-use crate::math::{cmp::ApproxEq, interp::Interpolate, vector::Vec2};
+use crate::math::{cmp::ApproxEq, ops::Interpolate, vector::Vec2};
 
 /// A point in 2D space.
 #[derive(Clone, Copy, Debug, Default, PartialEq, PartialOrd)]
