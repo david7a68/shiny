@@ -4,7 +4,7 @@ pub trait Interpolate {
     /// Implements linear interpolation.
     ///
     /// ```rust
-    /// # use shiny::math::interp::Interpolate;
+    /// # use shiny::math::ops::Interpolate;
     /// let a = 1.0;
     /// let b = 2.0;
     /// assert_eq!(a.lerp(0.5, &b), 1.5);

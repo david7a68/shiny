@@ -1,9 +1,14 @@
-use std::{fmt::Debug, ops::Add};
+use std::{
+    fmt::Debug,
+    ops::{Add, AddAssign},
+};
 
 use crate::{
     math::simd::Float4,
     utils::cmp::{max, min},
 };
+
+use super::point::Point;
 
 #[derive(Clone, Copy)]
 #[repr(transparent)]
@@ -14,6 +19,25 @@ impl Rect {
     #[must_use]
     pub fn new(left: f32, right: f32, top: f32, bottom: f32) -> Self {
         Self(Float4::new(left, right, top, bottom))
+    }
+
+    /// Finds the smallest rectangle that contains all the points in the given
+    /// slice. Returns an empty rectangle if the slice is empty.
+    #[must_use]
+    pub fn enclosing(points: &[Point]) -> Self {
+        let mut left = 0.0;
+        let mut right = 0.0;
+        let mut top = 0.0;
+        let mut bottom = 0.0;
+
+        for p in points {
+            left = min!(left, p.x);
+            right = max!(right, p.x);
+            top = min!(top, p.y);
+            bottom = max!(bottom, p.y);
+        }
+
+        Self::new(left, right, top, bottom)
     }
 
     #[must_use]
@@ -67,6 +91,12 @@ impl Add for Rect {
             min!(self.top(), rhs.top()),
             max!(self.bottom(), rhs.bottom()),
         ))
+    }
+}
+
+impl AddAssign for Rect {
+    fn add_assign(&mut self, rhs: Self) {
+        *self = *self + rhs;
     }
 }
 

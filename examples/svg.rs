@@ -42,6 +42,7 @@ fn main() {
         }
     }
 
+    println!("writing images");
     write_png(image.get_pixels(), module_path!());
     let linear = image.convert(PixelFormat::Rgb10a2, ColorSpace::LinearSrgb);
     write_png(linear.get_pixels(), "hahaha");
@@ -137,7 +138,7 @@ fn read_svg(data: &str) -> Vec<Path> {
                 }
             }
 
-            paths.push(path.build());
+            paths.push(path.build().unwrap());
         }
     }
 

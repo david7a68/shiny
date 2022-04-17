@@ -30,18 +30,14 @@ pub trait Canvas: CanvasOps {
 /// canvas is (0, 0), instead of the actual canvas' origin.
 pub trait ClippedCanvas: CanvasOps {
     /// Returns the offset of the clip region relative to the canvas' origin.
-    fn clip_offset(&self) -> (u32, u32);
-
-    /// The width of the entire canvas (not the clip region).
-    fn actual_width(&self) -> u32;
-
-    /// The height of the entire canvas (not the clip region).
-    fn actual_height(&self) -> u32;
+    fn clip_offset(&self) -> (f32, f32);
 }
 
 /// Operations for rendering shapes to a render target, and querying its
 /// properties.
 pub trait CanvasOps {
+    type Clipped: ClippedCanvas;
+
     /// The width of the drawable area.
     fn width(&self) -> u32;
 
@@ -57,7 +53,7 @@ pub trait CanvasOps {
     /// If the clip region is larger than the drawable area, or extends outside
     /// of the drawable area, the region outside of the drawable area will also
     /// be clipped.
-    fn clip(&mut self, rect: Rect) -> &mut dyn ClippedCanvas;
+    fn clip(&mut self, rect: Rect) -> Self::Clipped;
 
     /// Creates a new, immutable paint object, and returns a reference to it.
     /// This allows the backend to cache the paint object in an

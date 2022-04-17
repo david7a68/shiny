@@ -41,7 +41,7 @@ fn main() {
                 Point::new(0.0, 100.0),
             )
             .unwrap();
-        builder.build()
+        builder.build().unwrap()
     };
 
     let mut image = PixelBuffer::new(200, 200, PixelFormat::Rgba8, ColorSpace::Srgb).unwrap();

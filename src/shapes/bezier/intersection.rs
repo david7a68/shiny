@@ -21,6 +21,26 @@ pub fn find(a: &[Point; 4], b: &[Point; 4]) -> ArrayVec<(f32, f32), 9> {
     intersections
 }
 
+/// Checks if the curve intersects with itself (forms a loop), and identifies
+/// the t-values of the intersection if so.
+#[must_use]
+pub fn find_self(a: &[Point; 4]) -> Option<(f32, f32)> {
+    let left = CurvePart::new(a, 0.0, 0.5);
+    let right = CurvePart::new(a, 0.5, 1.0);
+
+    let mut intersections = ArrayVec::new();
+    find_intersections_in_range(left, right, &mut intersections);
+
+    if intersections.is_empty() {
+        None
+    } else {
+        // debug_assert!(intersections.len() == 1);
+        println!("{:?}", intersections);
+        let (t1, t2) = intersections[0];
+        Some((t1, t2))
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
 struct CurvePart<'a> {
     points: &'a [Point; 4],
@@ -88,6 +108,13 @@ fn find_intersections_in_range(
             b
         );
 
+        assert!(
+            !intersections.is_full(),
+            "Hit max intersections, degenerate case? a:{:?}, b:{:?}",
+            a,
+            b
+        );
+
         // Alternate between a and b
         let proportion_remaining = if (num_iterations & 1) == 0 {
             calc(&mut a, &b)
@@ -101,7 +128,20 @@ fn find_intersections_in_range(
         } else if (a.length() + b.length()).approx_eq(0.0) {
             // The combined curve errors are close enough to zero that we can
             // safely say we've found the intersection.
-            intersections.push((a.start, b.start));
+
+            // Ignore intersections that are too similar to the previously found
+            // intersection. This often happens if the splitting the curve
+            // produces two values that are both close enough to the actual
+            // intersection to register. Ideally, there should be some way to
+            // avoid doing this (maybe by looking ahead?), but this works for
+            // now.
+            if let Some((a_prev, _)) = intersections.last() {
+                if !a_prev.approx_eq(a.start) {
+                    intersections.push((a.start, b.start));
+                }
+            } else {
+                intersections.push((a.start, b.start));
+            }
             break;
         } else if proportion_remaining > 0.8 {
             // The clip did not result in a significant reduction in the curve's
@@ -200,14 +240,14 @@ fn clip_line(curve: &[Point; 4], line: &Line) -> (f32, f32) {
         let x3 = Line::between(e0, e3).x_intercept();
         // Smallest value in the range (0, 1)
         let mut min = 1.0;
-        if x1 > 0.0 && x1 < min {
-            min = x1;
+        if x1 > 0.0 {
+            min = min!(x1, min);
         }
-        if x2 > 0.0 && x2 < min {
-            min = x2;
+        if x2 > 0.0 {
+            min = min!(x2, min);
         }
-        if x3 > 0.0 && x3 < min {
-            min = x3;
+        if x3 > 0.0 {
+            min = min!(x3, min);
         }
         min
     } else {
@@ -221,14 +261,14 @@ fn clip_line(curve: &[Point; 4], line: &Line) -> (f32, f32) {
         let x3 = Line::between(e3, e2).x_intercept();
         // Largest value in the range (0, 1)
         let mut max = 0.0;
-        if x1 < 1.0 && x1 > max {
-            max = x1;
+        if x1 < 1.0 {
+            max = max!(x1, max);
         }
-        if x2 < 1.0 && x2 > max {
-            max = x2;
+        if x2 < 1.0 {
+            max = max!(x2, max);
         }
-        if x3 < 1.0 && x3 > max {
-            max = x3;
+        if x3 < 1.0 {
+            max = max!(x3, max);
         }
         max
     } else {

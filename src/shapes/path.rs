@@ -1,6 +1,6 @@
 use crate::math::cmp::ApproxEq;
 
-use super::{bezier::CubicSlice, point::Point};
+use super::{bezier::CubicSlice, point::Point, rect::Rect};
 
 #[derive(Debug)]
 pub struct Path {
@@ -36,7 +36,7 @@ impl<'a> Iterator for SubPathIterator<'a> {
             Some(SegmentIterator {
                 path: self.path,
                 cursor: segment.first,
-                segment_end: segment.last,
+                segment_end: segment.one_past_end,
             })
         } else {
             None
@@ -55,7 +55,7 @@ impl<'a> Iterator for SegmentIterator<'a> {
     type Item = CubicSlice<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.cursor < self.segment_end {
+        if self.cursor + 3 < self.segment_end {
             let slice = &self.path.points[self.cursor..self.cursor + 4];
             self.cursor += 3;
 
@@ -69,7 +69,8 @@ impl<'a> Iterator for SegmentIterator<'a> {
 #[derive(Clone, Copy, Debug)]
 struct PathSegment {
     first: usize,
-    last: usize,
+    one_past_end: usize,
+    bounds: Rect,
 }
 
 #[derive(Debug)]
@@ -83,7 +84,7 @@ pub enum Error {
 pub struct Builder {
     segments: Vec<PathSegment>,
     points: Vec<Point>,
-    path_start_offset: Option<usize>,
+    segment_index: Option<usize>,
 }
 
 // states
@@ -93,20 +94,27 @@ pub struct Builder {
 
 impl Builder {
     pub fn move_to(&mut self, point: Point) {
-        if let Some(path_start_offset) = self.path_start_offset {
-            let segment = PathSegment {
-                first: path_start_offset,
-                last: self.points.len().saturating_sub(1),
-            };
-            self.segments.push(segment);
+        if let Some(index) = self.segment_index.take() {
+            // Close out the previous segment.
+            self.segments[index].one_past_end = self.points.len();
         }
 
-        self.path_start_offset = Some(self.points.len());
+        self.segment_index = Some(self.segments.len());
+        self.segments.push(PathSegment {
+            first: self.points.len(),
+            one_past_end: 0,
+            bounds: Rect::new(point.x, point.x, point.y, point.y),
+        });
+
         self.points.push(point);
     }
 
     pub fn line_to(&mut self, point: Point) -> Result<(), Error> {
-        if self.path_start_offset.is_some() {
+        if let Some(index) = self.segment_index {
+            // Adjust bounding box to include this line.
+            self.segments[index].bounds += Rect::enclosing(&[point]);
+
+            // Add the line as a cubic bezier.
             let points = Self::line_points(self.points[self.points.len() - 1], point);
             self.points.push(points[1]);
             self.points.push(points[2]);
@@ -118,7 +126,9 @@ impl Builder {
     }
 
     pub fn add_cubic(&mut self, p1: Point, p2: Point, p3: Point) -> Result<(), Error> {
-        if self.path_start_offset.is_some() {
+        if let Some(index) = self.segment_index {
+            self.segments[index].bounds += Rect::enclosing(&[p1, p2, p3]);
+
             self.points.push(p1);
             self.points.push(p2);
             self.points.push(p3);
@@ -129,27 +139,24 @@ impl Builder {
     }
 
     pub fn close(&mut self) -> Result<(), Error> {
-        if let Some(path_start_offset) = self.path_start_offset.take() {
-            // if the start and end are the same, then we don't need to add a
-            // segment else create a straight line between the two and add it to
-            // the path.
-            let start = self.points[path_start_offset];
+        if let Some(index) = self.segment_index.take() {
+            // Create a line closing the path iff the start and end points are
+            // not equal.
+            let start = self.points[self.segments[index].first];
             let end = self.points[self.points.len() - 1];
 
             if !start.approx_eq(end) {
-                let points = Self::line_points(
-                    self.points[self.points.len() - 1],
-                    self.points[path_start_offset],
-                );
+                let points = Self::line_points(end, start);
                 self.points.push(points[1]);
                 self.points.push(points[2]);
                 self.points.push(points[3]);
             }
 
-            self.segments.push(PathSegment {
-                first: path_start_offset,
-                last: self.points.len() - 1,
-            });
+            // No need to adjust the bounding box, since we're working within
+            // the convex hull of the bounding box (no way to generate a line
+            // that lies outside of the bounds).
+
+            self.segments[index].one_past_end = self.points.len();
 
             Ok(())
         } else {
@@ -166,20 +173,15 @@ impl Builder {
         }
     }
 
-    #[must_use]
-    pub fn build(mut self) -> Path {
-        if let Some(path_start_offset) = self.path_start_offset {
-            let segment = PathSegment {
-                first: path_start_offset,
-                last: self.points.len() - 1,
-            };
-            self.segments.push(segment);
-        }
+    pub fn build(mut self) -> Result<Path, Error> {
+        // Swallow the error, because the path may have already been closed by
+        // the user.
+        let _ = self.close();
 
-        Path {
+        Ok(Path {
             segments: self.segments.into_boxed_slice(),
             points: self.points.into_boxed_slice(),
-        }
+        })
     }
 
     fn line_points(p0: Point, p3: Point) -> [Point; 4] {

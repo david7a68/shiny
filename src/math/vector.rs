@@ -1,5 +1,7 @@
 use std::ops::{Add, Div, Mul, Sub};
 
+use crate::shapes::point::Point;
+
 use super::cmp::ApproxEq;
 
 /// A vector in 2D space.
@@ -79,6 +81,13 @@ impl Add<Vec2> for Vec2 {
     type Output = Vec2;
     fn add(self, rhs: Vec2) -> Self::Output {
         Vec2(self.0 + rhs.0, self.1 + rhs.1)
+    }
+}
+
+impl Add<Point> for Vec2 {
+    type Output = Point;
+    fn add(self, rhs: Point) -> Self::Output {
+        Point::new(self.0 + rhs.x, self.1 + rhs.y)
     }
 }
 

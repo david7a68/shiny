@@ -15,7 +15,7 @@
 //! both cases was a significant factor.
 //!
 
-use std::hash::Hash;
+use std::{hash::Hash, ops::Add};
 
 /// A 4-component color specifying red, green, blue, and transparency (alpha).
 /// This type is used when specifying colors for drawing commands, and is
@@ -30,6 +30,46 @@ pub struct Color {
 }
 
 impl Color {
+    pub const RED: Self = Color {
+        r: 1.0,
+        g: 0.0,
+        b: 0.0,
+        a: 1.0,
+        space: Space::Unknown,
+    };
+
+    pub const GREEN: Self = Color {
+        r: 0.0,
+        g: 1.0,
+        b: 0.0,
+        a: 1.0,
+        space: Space::Unknown,
+    };
+
+    pub const BLUE: Self = Color {
+        r: 0.0,
+        g: 0.0,
+        b: 1.0,
+        a: 1.0,
+        space: Space::Unknown,
+    };
+
+    pub const BLACK: Self = Color {
+        r: 0.0,
+        g: 0.0,
+        b: 0.0,
+        a: 1.0,
+        space: Space::Unknown,
+    };
+
+    pub const WHITE: Self = Color {
+        r: 1.0,
+        g: 1.0,
+        b: 1.0,
+        a: 1.0,
+        space: Space::Unknown,
+    };
+
     pub fn auto(r: f32, g: f32, b: f32, a: f32) -> Self {
         Color {
             r,
@@ -170,6 +210,20 @@ impl Hash for Color {
 impl PartialEq for Color {
     fn eq(&self, other: &Self) -> bool {
         self.r == other.r && self.g == other.g && self.b == other.b && self.a == other.a
+    }
+}
+
+impl Add for Color {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Color {
+            r: self.r + rhs.r,
+            g: self.g + rhs.g,
+            b: self.b + rhs.b,
+            a: self.a + rhs.a,
+            space: self.space,
+        }
     }
 }
 

@@ -59,7 +59,12 @@ impl PixelFormat {
                 let g = bytes[1];
                 let b = bytes[2];
                 let a = bytes[3];
-                Color::unknown(r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0, a as f32 / 255.0)
+                Color::unknown(
+                    r as f32 / 255.0,
+                    g as f32 / 255.0,
+                    b as f32 / 255.0,
+                    a as f32 / 255.0,
+                )
             }
             PixelFormat::Rgb10a2 => {
                 let v = u32::from_le_bytes(bytes[0..4].try_into().unwrap());
@@ -95,13 +100,6 @@ impl PixelFormat {
 }
 
 /// Represents a handle to an image with a given color space and pixel format.
-///
-/// e.g.:
-/// ```rust
-/// # use shiny::pixel_buffer::PixelBuffer;
-/// # use shiny::color::Srgb8;
-/// type SrgbPixelBuffer = PixelBuffer<Srgb8>;
-/// ```
 pub trait Image {
     /// The width of the image.
     #[must_use]

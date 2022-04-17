@@ -1,4 +1,4 @@
-use std::{collections::HashMap, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use crate::{
     canvas::{Canvas, CanvasOps, ClippedCanvas},
@@ -7,14 +7,30 @@ use crate::{
     image::{Error as ImageError, Image, PixelFormat},
     paint::{Paint, PaintConfig},
     pixel_buffer::PixelBuffer,
-    shapes::rect::Rect,
+    shapes::{
+        path::{Builder as PathBuilder, Path},
+        rect::Rect,
+    },
 };
 
-use super::Shared;
+use super::BackendState;
+
+struct DrawCommand {
+    paint: Paint,
+    path: Path,
+}
+
+struct CanvasState {
+    paints: HashMap<u64, PaintConfig, PassThroughHasher>,
+    // Todo: Computing cpatches for paths is an expensive operation, so we want
+    // to cache them in `CachedPath`s or something of the like. We also want to
+    // process them in a multithreaded way.
+    commands: Vec<DrawCommand>,
+}
 
 pub struct SoftwareCanvas {
-    shared_state: Rc<Shared>,
-    paints: HashMap<u64, PaintConfig, PassThroughHasher>,
+    shared_state: Rc<BackendState>,
+    internal_state: Rc<RefCell<CanvasState>>,
     pixels: PixelBuffer,
 }
 
@@ -24,11 +40,14 @@ impl SoftwareCanvas {
         height: u32,
         format: PixelFormat,
         color_space: ColorSpace,
-        shared_state: Rc<Shared>,
+        shared_state: Rc<BackendState>,
     ) -> Result<Self, ImageError> {
         Ok(SoftwareCanvas {
             shared_state,
-            paints: HashMap::with_hasher(PassThroughHasher::default()),
+            internal_state: Rc::new(RefCell::new(CanvasState {
+                paints: HashMap::with_hasher(PassThroughHasher::default()),
+                commands: Vec::new(),
+            })),
             pixels: PixelBuffer::new(width, height, format, color_space)?,
         })
     }
@@ -41,6 +60,8 @@ impl Canvas for SoftwareCanvas {
 }
 
 impl CanvasOps for SoftwareCanvas {
+    type Clipped = SoftwareClippedCanvas;
+
     fn width(&self) -> u32 {
         self.pixels.width()
     }
@@ -53,13 +74,13 @@ impl CanvasOps for SoftwareCanvas {
         self.pixels.clear(color);
     }
 
-    fn clip(&mut self, rect: Rect) -> &mut dyn ClippedCanvas {
+    fn clip(&mut self, rect: Rect) -> Self::Clipped {
         todo!()
     }
 
     fn create_paint(&mut self, config: PaintConfig) -> Paint {
         let hash = hash_of(&config);
-        self.paints.insert(hash, config);
+        self.internal_state.borrow_mut().paints.insert(hash, config);
         Paint::new(hash)
     }
 
@@ -71,15 +92,71 @@ impl CanvasOps for SoftwareCanvas {
         todo!()
     }
 
-    fn begin_path(&mut self) -> crate::shapes::path::Builder {
+    fn begin_path(&mut self) -> PathBuilder {
         todo!()
     }
 
-    fn fill_path(&mut self, path: &crate::shapes::path::Path, paint: Paint) {
+    fn fill_path(&mut self, path: &Path, paint: Paint) {
         todo!()
     }
 
-    fn stroke_path(&mut self, path: &crate::shapes::path::Path, paint: Paint) {
+    fn stroke_path(&mut self, path: &Path, paint: Paint) {
+        todo!()
+    }
+}
+
+pub struct SoftwareClippedCanvas {
+    shared_state: Rc<BackendState>,
+    internal_state: Rc<RefCell<CanvasState>>,
+    clip_rect: Rect,
+}
+
+impl ClippedCanvas for SoftwareClippedCanvas {
+    fn clip_offset(&self) -> (f32, f32) {
+        (self.clip_rect.left(), self.clip_rect.top())
+    }
+}
+
+impl CanvasOps for SoftwareClippedCanvas {
+    type Clipped = Self;
+
+    fn width(&self) -> u32 {
+        todo!()
+    }
+
+    fn height(&self) -> u32 {
+        todo!()
+    }
+
+    fn clear(&mut self, color: Color) {
+        todo!()
+    }
+
+    fn clip(&mut self, rect: Rect) -> Self::Clipped {
+        todo!()
+    }
+
+    fn create_paint(&mut self, config: PaintConfig) -> Paint {
+        todo!()
+    }
+
+    fn destroy_paint(&mut self, paint: Paint) {
+        todo!()
+    }
+
+    fn paint_config(&self, paint: Paint) -> PaintConfig {
+        todo!()
+    }
+
+    fn begin_path(&mut self) -> PathBuilder {
+        todo!()
+    }
+
+    fn fill_path(&mut self, path: &Path, paint: Paint) {
+        todo!()
+    }
+
+    fn stroke_path(&mut self, path: &Path, paint: Paint) {
         todo!()
     }
 }

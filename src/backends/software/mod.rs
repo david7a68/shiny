@@ -15,13 +15,13 @@ use self::canvas::SoftwareCanvas;
 pub mod canvas;
 
 pub struct Software {
-    shared: Rc<Shared>,
+    shared: Rc<BackendState>,
 }
 
 impl Software {
     pub fn new() -> Self {
         Software {
-            shared: Rc::new(Shared {}),
+            shared: Rc::new(BackendState {}),
         }
     }
 
@@ -36,4 +36,4 @@ impl Software {
     }
 }
 
-pub(super) struct Shared {}
+pub(super) struct BackendState {}
