@@ -1,7 +1,8 @@
 use std::arch::x86_64::{
-    __m128, _mm_add_ps, _mm_andnot_ps, _mm_castsi128_ps, _mm_cmpeq_ps, _mm_cmple_ps, _mm_cmplt_ps,
-    _mm_div_ps, _mm_loadu_ps, _mm_max_ps, _mm_min_ps, _mm_movemask_ps, _mm_mul_ps, _mm_set1_epi32,
-    _mm_set1_ps, _mm_set_ps, _mm_shuffle_ps, _mm_sqrt_ps, _mm_sub_ps, _MM_TRANSPOSE4_PS,
+    __m128, _mm_add_ps, _mm_and_ps, _mm_andnot_ps, _mm_castsi128_ps, _mm_cmpeq_ps, _mm_cmple_ps,
+    _mm_cmplt_ps, _mm_div_ps, _mm_loadu_ps, _mm_max_ps, _mm_min_ps, _mm_movemask_ps, _mm_mul_ps,
+    _mm_set1_epi32, _mm_set1_ps, _mm_set_ps, _mm_setzero_ps, _mm_shuffle_ps, _mm_sqrt_ps,
+    _mm_sub_ps, _MM_TRANSPOSE4_PS,
 };
 
 pub type Float4 = __m128;
@@ -125,6 +126,19 @@ pub fn dot(lhs: Float4, rhs: Float4) -> f32 {
     let tmp0 = mul(lhs, rhs);
     let (a, b, c, d) = unpack(tmp0);
     a + b + c + d
+}
+
+#[inline]
+#[must_use]
+pub fn cross(lhs: Float4, rhs: Float4) -> Float4 {
+    unsafe {
+        let lhs_120 = _mm_shuffle_ps(lhs, lhs, _MM_SHUFFLE(1, 2, 0, 3));
+        let rhs_120 = _mm_shuffle_ps(rhs, rhs, _MM_SHUFFLE(1, 2, 0, 3));
+        let minuend = mul(lhs, rhs_120);
+        let subtrahend = mul(rhs, lhs_120);
+        let unshuffled = sub(minuend, subtrahend);
+        _mm_shuffle_ps(unshuffled, unshuffled, _MM_SHUFFLE(1, 2, 0, 3))
+    }
 }
 
 #[inline]

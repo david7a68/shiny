@@ -184,6 +184,22 @@ impl Float4 {
         arch::dot(self.0, rhs.0)
     }
 
+    /// Computes the cross product of two vectors.
+    ///
+    /// ```rust
+    /// # use shiny::math::simd::Float4;
+    /// let a = Float4::new(1.0, 2.0, 3.0, 4.0);
+    /// let b = Float4::new(1.0, 3.0, 3.0, 150.0);
+    ///
+    /// // Note how the 4th element is always 0.
+    /// assert_eq!(a.cross(b).unpack(), (-3.0, 0.0, 1.0, 0.0));
+    /// ```
+    #[inline]
+    #[must_use]
+    pub fn cross(&self, rhs: Self) -> Self {
+        Self(arch::cross(self.0, rhs.0))
+    }
+
     /// Computes the smaller value for each pair of elements in the two vectors.
     /// This is semantically equivalent to performing each operation separately,
     /// but may make use of SIMD instructions to improve performance.
@@ -395,6 +411,12 @@ mod tests {
         assert!(a
             .dot(b)
             .approx_eq(&(1.0 * 5.0 + 2.0 * 6.0 + 3.0 * 7.0 + 4.0 * 8.0)));
+        {
+            let x = Float4::new(1.0, 2.0, 3.0, 7.0);
+            let y = Float4::new(1.0, 3.0, 2.0, 10.0);
+            // Note how the fourth element is always 0.
+            assert!(x.cross(y).approx_eq(&Float4::new(-5.0, 1.0, 1.0, 0.0)));
+        }
         assert_eq!(a.min(b), a);
         assert_eq!(b.min(a), a);
         assert_eq!(a.max(b), b);

@@ -51,6 +51,12 @@ impl Vec3 {
     pub fn dot(self, rhs: Self) -> f32 {
         self.packed.dot(rhs.packed)
     }
+
+    pub fn cross(self, rhs: Self) -> Self {
+        Self {
+            packed: self.packed.cross(rhs.packed),
+        }
+    }
 }
 
 // Unary Ops
