@@ -3,7 +3,7 @@ mod common;
 use shiny::{
     color::{Color, Space as ColorSpace},
     image::{Image, PixelFormat},
-    math::vector::Vec2,
+    math::vector2::Vec2,
     pixel_buffer::PixelBuffer,
     shapes::{
         bezier::{Bezier, CubicSlice},
@@ -14,7 +14,7 @@ use shiny::{
 use common::write_png;
 
 fn main() {
-    let mut image = PixelBuffer::new(500, 500, PixelFormat::Rgba8, ColorSpace::Srgb).unwrap();
+    let mut image = PixelBuffer::new(500, 500, PixelFormat::Rgba8, ColorSpace::LinearSrgb).unwrap();
     image.clear(Color::BLACK);
 
     // let points = [
@@ -23,23 +23,18 @@ fn main() {
     //     Point::new(10.0, 190.0),
     //     Point::new(150.0, 10.0),
     // ];
+
     let mut points = [
         Point::new(78.17871, -45.604248),
         Point::new(3004.715, 1307.1124),
         Point::new(2961.2825, 1202.874),
         Point::new(2917.8499, 1202.874),
     ];
-    
     for p in &mut points {
         *p = (Vec2::new(100.0, 100.0) + p.vec() * 0.1).into();
     }
 
     let curve = CubicSlice::new(&points);
-
-    for p in &points {
-        // println!("{:?}", p);
-        image.set(p.x as u32, p.y as u32, Color::GREEN);
-    }
 
     let mut t = 0.0;
     let delta = 0.001;

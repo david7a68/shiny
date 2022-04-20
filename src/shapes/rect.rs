@@ -64,7 +64,7 @@ impl Rect {
     pub fn intersects_with(&self, rhs: &Rect) -> bool {
         let a = Float4::new(self.left(), self.top(), rhs.left(), rhs.top());
         let b = Float4::new(rhs.right(), rhs.bottom(), self.right(), self.bottom());
-        a.less_or_equal(&b) == (true, true, true, true)
+        a.less_or_equal(b) == (true, true, true, true)
     }
 }
 

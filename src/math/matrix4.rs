@@ -1,6 +1,6 @@
 use std::ops::Mul;
 
-use super::{simd::Float4, vector::Vec2};
+use super::{simd::Float4, vector2::Vec2};
 
 /// A matrix with 1 row and 4 columns.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -9,6 +9,7 @@ pub struct Mat1x4 {
 }
 
 impl Mat1x4 {
+    #[inline]
     #[must_use]
     pub fn new(v11: f32, v12: f32, v13: f32, v14: f32) -> Self {
         Self {
@@ -51,8 +52,9 @@ pub struct Mat4x2 {
 }
 
 impl Mat4x2 {
-    #[rustfmt::skip]
+    #[inline]
     #[must_use]
+    #[rustfmt::skip]
     #[allow(clippy::too_many_arguments)]
     pub fn new(v11: f32, v12: f32,
                v21: f32, v22: f32,
@@ -117,7 +119,7 @@ impl Mat4x4 {
     /// Flips the matrix across its diagonal.
     ///
     /// ```rust
-    /// # use shiny::math::matrix::Mat4x4;
+    /// # use shiny::math::matrix4::Mat4x4;
     /// let m = Mat4x4::new(
     ///     1.0, 2.0, 3.0, 4.0,
     ///     5.0, 6.0, 7.0, 8.0,
@@ -130,18 +132,11 @@ impl Mat4x4 {
     /// assert_eq!(t.r2(), (3.0, 7.0, 11.0, 15.0));
     /// assert_eq!(t.r3(), (4.0, 8.0, 12.0, 16.0));
     /// ```
+    #[inline]
     #[must_use]
     pub fn transpose(&self) -> Self {
-        let (v11, v12, v13, v14) = self.r0.unpack();
-        let (v21, v22, v23, v24) = self.r1.unpack();
-        let (v31, v32, v33, v34) = self.r2.unpack();
-        let (v41, v42, v43, v44) = self.r3.unpack();
-        Self {
-            r0: Float4::new(v11, v21, v31, v41),
-            r1: Float4::new(v12, v22, v32, v42),
-            r2: Float4::new(v13, v23, v33, v43),
-            r3: Float4::new(v14, v24, v34, v44),
-        }
+        let (r0, r1, r2, r3) = Float4::transpose4x4(self.r0, self.r1, self.r2, self.r3);
+        Self { r0, r1, r2, r3 }
     }
 }
 
@@ -171,7 +166,7 @@ impl Mul<Mat4x2> for Mat4x4 {
 
 #[cfg(test)]
 mod tests {
-    use crate::math::vector::Vec2;
+    use crate::math::vector2::Vec2;
 
     use super::*;
     #[test]

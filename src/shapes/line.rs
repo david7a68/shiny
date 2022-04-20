@@ -37,7 +37,7 @@ impl Line {
 
     #[must_use]
     pub fn between(p1: Point, p2: Point) -> Self {
-        if p1.x.approx_eq(p2.x) {
+        if p1.x.approx_eq(&p2.x) {
             Line::new(p1.x, 0.0, 0.0)
         } else {
             let delta = p2 - p1;
@@ -73,7 +73,7 @@ impl Line {
 
     #[must_use]
     pub fn approx_eq(&self, rhs: &Self) -> bool {
-        self.a.approx_eq(rhs.a) & self.b.approx_eq(rhs.b) & self.c.approx_eq(rhs.c)
+        self.a.approx_eq(&rhs.a) & self.b.approx_eq(&rhs.b) & self.c.approx_eq(&rhs.c)
     }
 
     /// Calculates a line parallel to the current line that passes through
@@ -128,20 +128,20 @@ mod tests {
             // line with positive slope
             let line = Line::between(Point::new(2.0, 2.0), Point::new(6.0, 4.0));
             assert!(line.approx_eq(&Line::new(0.4472136, -0.8944272, 0.8944272)));
-            assert!(2.0.approx_eq(line.y_at(2.0).unwrap().y));
-            assert!(2.5.approx_eq(line.y_at(3.0).unwrap().y));
-            assert!(3.0.approx_eq(line.y_at(4.0).unwrap().y));
-            assert!(3.5.approx_eq(line.y_at(5.0).unwrap().y));
-            assert!(4.0.approx_eq(line.y_at(6.0).unwrap().y));
+            assert!(2.0.approx_eq(&line.y_at(2.0).unwrap().y));
+            assert!(2.5.approx_eq(&line.y_at(3.0).unwrap().y));
+            assert!(3.0.approx_eq(&line.y_at(4.0).unwrap().y));
+            assert!(3.5.approx_eq(&line.y_at(5.0).unwrap().y));
+            assert!(4.0.approx_eq(&line.y_at(6.0).unwrap().y));
         }
         {
             // line with negative slope
             let line = Line::between(Point::new(2.0, 4.0), Point::new(6.0, 2.0));
-            assert!(4.0.approx_eq(line.y_at(2.0).unwrap().y));
-            assert!(3.5.approx_eq(line.y_at(3.0).unwrap().y));
-            assert!(3.0.approx_eq(line.y_at(4.0).unwrap().y));
-            assert!(2.5.approx_eq(line.y_at(5.0).unwrap().y));
-            assert!(2.0.approx_eq(line.y_at(6.0).unwrap().y));
+            assert!(4.0.approx_eq(&line.y_at(2.0).unwrap().y));
+            assert!(3.5.approx_eq(&line.y_at(3.0).unwrap().y));
+            assert!(3.0.approx_eq(&line.y_at(4.0).unwrap().y));
+            assert!(2.5.approx_eq(&line.y_at(5.0).unwrap().y));
+            assert!(2.0.approx_eq(&line.y_at(6.0).unwrap().y));
         }
         {
             // vertical line
@@ -166,7 +166,7 @@ mod tests {
             (line2.a * line1.b - line1.a * line2.b) / (line1.a * line2.a + line1.b * line2.b),
         );
         println!("{} : {}", angle.abs(), std::f32::consts::FRAC_PI_2);
-        assert!(angle.abs().approx_eq(std::f32::consts::FRAC_PI_2));
+        assert!(angle.abs().approx_eq(&std::f32::consts::FRAC_PI_2));
     }
 
     #[test]
@@ -174,8 +174,8 @@ mod tests {
         let line = Line::between(Point::new(2.0, 2.0), Point::new(6.0, 4.0));
         assert_eq!(line.signed_distance_to(Point::new(2.0, 2.0)), 0.0);
         // point on same side as the origin
-        assert!(0.89442706.approx_eq(line.signed_distance_to(Point::new(2.0, 1.0))));
+        assert!(0.89442706.approx_eq(&line.signed_distance_to(Point::new(2.0, 1.0))));
         // point on opposite side of the origin
-        assert!((-0.89442706).approx_eq(line.signed_distance_to(Point::new(2.0, 3.0))));
+        assert!((-0.89442706).approx_eq(&line.signed_distance_to(Point::new(2.0, 3.0))));
     }
 }

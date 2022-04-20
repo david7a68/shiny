@@ -4,7 +4,7 @@ use common::*;
 use shiny::{
     color::{Color, Space as ColorSpace},
     image::{Image, PixelFormat},
-    math::vector::Vec2,
+    math::vector2::Vec2,
     pixel_buffer::PixelBuffer,
     shapes::{
         bezier::Bezier,

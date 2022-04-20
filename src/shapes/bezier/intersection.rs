@@ -24,9 +24,49 @@ pub fn find(a: &[Point; 4], b: &[Point; 4]) -> ArrayVec<(f32, f32), 9> {
 /// Checks if the curve intersects with itself (forms a loop), and identifies
 /// the t-values of the intersection if so.
 #[must_use]
-pub fn find_self(a: &[Point; 4]) -> Option<(f32, f32)> {
-    let left = CurvePart::new(a, 0.0, 0.5);
-    let right = CurvePart::new(a, 0.5, 1.0);
+pub fn find_self(curve: &[Point; 4]) -> Option<(f32, f32)> {
+    // Instructions from "Resolution Independent Curve Rendering using
+    // Programmable Graphics Hardware by Charles Loop, Jim Blinn (2005)."
+
+    // Algorithm:
+    // 1. Classify the curve as a serpentine, cusp, or loop.
+    //
+    //   a. Convert the bezier control points into the power basis by the
+    //   product `C = M_3*B` within a homogenous coordinate system.
+    //
+    //   b. Calculate the vector `d = [d0, d1, d2, d3]` according to the formula:
+    //
+    //            x3 y3 w3            x3 y3 w3
+    //   d0 = det x2 y2 w2  d1 = -det x2 y2 w2
+    //            x1 y1 w1            x0 y0 w0
+    //
+    //           x3 y3 w3             x2 y2 w2
+    //  d2 = det x1 y1 w1   d3 = -det x1 y1 w1
+    //           x0 y0 w0             x0 y0 w0
+    //
+    //   c. Calculate a discriminant according to the formula
+    //   `4(p0*p2-p1^2)(p1*p3-p2^2)-(p1*p2-p0*p3)`.
+    //
+    //   d. If the discriminant is 0, the curve is a loop.
+    //
+    // 2. If the curve is a loop, calculate the real roots of the curve and
+    //    return it.
+    //
+    // 3. Else return None.
+
+    let a1 = {
+        let x0 = curve[0].x;
+        let y0 = curve[0].y;
+        let x1 = curve[1].x;
+        let y1 = curve[1].y;
+        let x2 = curve[2].x;
+        let y2 = curve[2].y;
+        let x3 = curve[3].x;
+        let y3 = curve[3].y;
+    };
+
+    let left = CurvePart::new(curve, 0.0, 0.5);
+    let right = CurvePart::new(curve, 0.5, 1.0);
 
     let mut intersections = ArrayVec::new();
     find_intersections_in_range(left, right, &mut intersections);
@@ -34,8 +74,7 @@ pub fn find_self(a: &[Point; 4]) -> Option<(f32, f32)> {
     if intersections.is_empty() {
         None
     } else {
-        // debug_assert!(intersections.len() == 1);
-        println!("{:?}", intersections);
+        debug_assert!(intersections.len() == 1);
         let (t1, t2) = intersections[0];
         Some((t1, t2))
     }
@@ -125,7 +164,7 @@ fn find_intersections_in_range(
         if proportion_remaining < 0.0 {
             // There is no intersection in this region, so we can stop.
             break;
-        } else if (a.length() + b.length()).approx_eq(0.0) {
+        } else if (a.length() + b.length()).approx_eq(&0.0) {
             // The combined curve errors are close enough to zero that we can
             // safely say we've found the intersection.
 
@@ -136,7 +175,7 @@ fn find_intersections_in_range(
             // avoid doing this (maybe by looking ahead?), but this works for
             // now.
             if let Some((a_prev, _)) = intersections.last() {
-                if !a_prev.approx_eq(a.start) {
+                if !a_prev.approx_eq(&a.start) {
                     intersections.push((a.start, b.start));
                 }
             } else {
@@ -376,7 +415,7 @@ mod test {
             for (a, b) in intersections.iter() {
                 let point1 = evaluate(&pair.curve1, *a);
                 let point2 = evaluate(&pair.curve2, *b);
-                assert!(point1.approx_eq_within(point2, 0.001));
+                assert!(point1.approx_eq_within(&point2, 0.001));
             }
         }
     }
@@ -412,14 +451,14 @@ mod test {
         let thin = Line::between(curve[0], curve[3]);
         let (low, high) = super::fat_line_parallel(&curve);
 
-        assert!(low.c.approx_eq(40.70803));
-        assert!(high.c.approx_eq(151.37787));
+        assert!(low.c.approx_eq(&40.70803));
+        assert!(high.c.approx_eq(&151.37787));
 
-        assert!(thin.a.approx_eq(low.a));
-        assert!(thin.b.approx_eq(low.b));
+        assert!(thin.a.approx_eq(&low.a));
+        assert!(thin.b.approx_eq(&low.b));
 
-        assert!(low.signed_distance_to(curve[2]).approx_eq(0.0));
-        assert!(high.signed_distance_to(curve[1]).approx_eq(0.0));
+        assert!(low.signed_distance_to(curve[2]).approx_eq(&0.0));
+        assert!(high.signed_distance_to(curve[1]).approx_eq(&0.0));
     }
 
     #[test]

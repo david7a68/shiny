@@ -1,6 +1,10 @@
 use std::ops::{Add, Sub};
 
-use crate::math::{cmp::ApproxEq, ops::Interpolate, vector::Vec2};
+use crate::math::{
+    cmp::{ApproxEq, F32_APPROX_EQUAL_THRESHOLD},
+    ops::Interpolate,
+    vector2::Vec2,
+};
 
 /// A point in 2D space.
 #[derive(Clone, Copy, Debug, Default, PartialEq, PartialOrd)]
@@ -37,6 +41,13 @@ impl Add<Vec2> for Point {
     }
 }
 
+impl Add<Point> for Vec2 {
+    type Output = Point;
+    fn add(self, rhs: Point) -> Self::Output {
+        Point::new(self.x() + rhs.x, self.y() + rhs.y)
+    }
+}
+
 impl From<Vec2> for Point {
     fn from(v: Vec2) -> Self {
         Self::new(v.x(), v.y())
@@ -53,11 +64,11 @@ impl Interpolate for Point {
 }
 
 impl ApproxEq for Point {
-    fn approx_eq(&self, other: Self) -> bool {
-        self.x.approx_eq(other.x) && self.y.approx_eq(other.y)
+    fn approx_eq(&self, other: &Self) -> bool {
+        self.approx_eq_within(other, F32_APPROX_EQUAL_THRESHOLD)
     }
 
-    fn approx_eq_within(&self, other: Self, epsilon: f32) -> bool {
-        self.x.approx_eq_within(other.x, epsilon) && self.y.approx_eq_within(other.y, epsilon)
+    fn approx_eq_within(&self, other: &Self, epsilon: f32) -> bool {
+        self.x.approx_eq_within(&other.x, epsilon) && self.y.approx_eq_within(&other.y, epsilon)
     }
 }

@@ -1,6 +1,11 @@
 use crate::math::cmp::ApproxEq;
 
-use super::{bezier::CubicSlice, point::Point, rect::Rect};
+use super::{
+    bezier::{Bezier, Cubic, CubicSlice},
+    line::Line,
+    point::Point,
+    rect::Rect,
+};
 
 #[derive(Debug)]
 pub struct Path {
@@ -129,9 +134,27 @@ impl Builder {
         if let Some(index) = self.segment_index {
             self.segments[index].bounds += Rect::enclosing(&[p1, p2, p3]);
 
-            self.points.push(p1);
-            self.points.push(p2);
-            self.points.push(p3);
+            let curve = Cubic::new(self.points[self.points.len() - 1], p1, p2, p3);
+            if let Some((a, b)) = curve.find_self_intersection() {
+                let (a, b, c) = curve.split2(a, b);
+
+                self.points.push(a.points[1]);
+                self.points.push(a.points[2]);
+                self.points.push(a.points[3]);
+                debug_assert!(a.points[3] == b.points[0]);
+                self.points.push(b.points[1]);
+                self.points.push(b.points[2]);
+                self.points.push(b.points[3]);
+                debug_assert!(b.points[3] == c.points[0]);
+                self.points.push(c.points[1]);
+                self.points.push(c.points[2]);
+                self.points.push(c.points[3]);
+            } else {
+                self.points.push(p1);
+                self.points.push(p2);
+                self.points.push(p3);
+            }
+
             Ok(())
         } else {
             Err(Error::PathNotStarted)
@@ -145,7 +168,7 @@ impl Builder {
             let start = self.points[self.segments[index].first];
             let end = self.points[self.points.len() - 1];
 
-            if !start.approx_eq(end) {
+            if !start.approx_eq(&end) {
                 let points = Self::line_points(end, start);
                 self.points.push(points[1]);
                 self.points.push(points[2]);
@@ -173,11 +196,7 @@ impl Builder {
         }
     }
 
-    pub fn build(mut self) -> Result<Path, Error> {
-        // Swallow the error, because the path may have already been closed by
-        // the user.
-        let _ = self.close();
-
+    pub fn build(self) -> Result<Path, Error> {
         Ok(Path {
             segments: self.segments.into_boxed_slice(),
             points: self.points.into_boxed_slice(),
@@ -190,5 +209,32 @@ impl Builder {
         let p2 = diff * 0.75;
 
         [p0, p1.into(), p2.into(), p3]
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn add_self_intersecting() {
+        // This test checks that the path builder correctly decomposes curves
+        // that have self-intersections. Since we only operate on cubic curves,
+        // only one self-intersection is possible per curve.
+
+        let p = {
+            let mut b = Builder::default();
+            b.move_to(Point::new(50.0, 10.0));
+            b.add_cubic(
+                Point::new(190.0, 190.0),
+                Point::new(10.0, 190.0),
+                Point::new(150.0, 10.0),
+            )
+            .unwrap();
+            b.build().unwrap()
+        };
+
+        assert_eq!(p.segments.len(), 1);
+        assert_eq!(p.points.len(), 10);
     }
 }

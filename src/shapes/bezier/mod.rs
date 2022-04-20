@@ -1,7 +1,7 @@
 use super::{point::Point, rect::Rect};
 use crate::{
     math::{
-        matrix::{Mat1x4, Mat4x2, Mat4x4},
+        matrix4::{Mat1x4, Mat4x2, Mat4x4},
         ops::Interpolate,
         simd::Float4,
     },
@@ -194,13 +194,13 @@ fn coarse_bounds(bezier: &[Point; 4]) -> Rect {
     let a = Float4::new(bezier[0].x, bezier[0].y, bezier[1].x, bezier[1].y);
     let b = Float4::new(bezier[2].x, bezier[2].y, bezier[3].x, bezier[3].y);
 
-    let min1 = a.min(&b);
-    let min2 = min1.cdab();
-    let min3 = min1.min(&min2);
+    let min1 = a.min(b);
+    let min2 = min1.swap_high_low();
+    let min3 = min1.min(min2);
 
-    let max1 = a.max(&b);
-    let max2 = max1.cdab();
-    let max3 = max1.max(&max2);
+    let max1 = a.max(b);
+    let max2 = max1.swap_high_low();
+    let max3 = max1.max(max2);
 
     Rect::new(min3.a(), max3.a(), min3.b(), max3.b())
 }
@@ -283,7 +283,7 @@ mod tests {
             let left = left.at(t);
             let original = bezier.at(t / 2.0);
             assert!(
-                left.approx_eq(original),
+                left.approx_eq(&original),
                 "left: {:?}, original: {:?}",
                 left,
                 original
@@ -295,7 +295,7 @@ mod tests {
             let right = right.at(t);
             let original = bezier.at(0.5 + t / 2.0);
             assert!(
-                right.approx_eq(original),
+                right.approx_eq(&original),
                 "right: {:?}, original: {:?}",
                 right,
                 original

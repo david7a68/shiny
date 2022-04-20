@@ -24,7 +24,7 @@ fn main() {
     let mut image = PixelBuffer::new(200, 200, PixelFormat::Rgba8, ColorSpace::Srgb).unwrap();
     image.clear(Color::auto(0.0, 0.0, 0.0, 1.0));
 
-    let (left, right) = curve.split(0.2);
+    let (left, right) = curve.split(0.5);
 
     draw_curve(
         &left.borrow(),
