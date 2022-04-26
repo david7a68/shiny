@@ -19,6 +19,13 @@ impl Vec3 {
         }
     }
 
+    pub fn dot4(a: (Self, Self), b: (Self, Self), c: (Self, Self), d: (Self, Self)) -> Float4 {
+        Float4::dot4(
+            a.0.packed, a.1.packed, b.0.packed, b.1.packed, c.0.packed, c.1.packed, d.0.packed,
+            d.1.packed,
+        )
+    }
+
     pub fn x(self) -> f32 {
         self.packed.a()
     }

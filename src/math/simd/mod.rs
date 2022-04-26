@@ -426,6 +426,14 @@ mod tests {
         assert_eq!(a.less_or_equal(b), (true, true, true, true));
         assert_eq!(a.less_or_equal(a), (true, true, true, true));
 
+        {
+            // Determinant of 3x3 matrix using the scalar triple product.
+            let x = Float4::new(3.0, 2.0, 1.0, 0.0);
+            let y = Float4::new(1.0, 1.0, 5.0, 0.0);
+            let z = Float4::new(9.0, 10.0, 11.0, 0.0);
+            assert!(x.dot(y.cross(z)).approx_eq(&-48.0));
+        }
+
         // Wide Ops
         assert!(Float4::horizontal_sum2(a, b).approx_eq(&(10.0, 26.0)));
         assert!(Float4::horizontal_sum4(a, b, a, b).approx_eq(&Float4::new(10.0, 26.0, 10.0, 26.0)));

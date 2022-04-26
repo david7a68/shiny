@@ -3,9 +3,9 @@ use std::{
     ops::{Add, AddAssign},
 };
 
-use crate::{
-    math::simd::Float4,
-    utils::cmp::{max, min},
+use crate::math::{
+    cmp::{max, min},
+    simd::Float4,
 };
 
 use super::point::Point;

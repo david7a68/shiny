@@ -1,5 +1,32 @@
 pub const F32_APPROX_EQUAL_THRESHOLD: f32 = 1e-5;
 
+macro_rules! min {
+    ($x: expr) => ($x);
+    ($x: expr, $($z: expr),+) => {{
+        let y = min!($($z),*);
+        if $x < y {
+            $x
+        } else {
+            y
+        }
+    }}
+}
+
+macro_rules! max {
+    ($x: expr) => ($x);
+    ($x: expr, $($z: expr),+) => {{
+        let y = max!($($z),*);
+        if $x > y {
+            $x
+        } else {
+            y
+        }
+    }}
+}
+
+pub(crate) use max;
+pub(crate) use min;
+
 pub trait ApproxEq<Rhs = Self>
 where
     Rhs: ?Sized,
