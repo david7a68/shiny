@@ -2,7 +2,6 @@ use crate::math::cmp::ApproxEq;
 
 use super::{
     bezier::{Bezier, Cubic, CubicSlice},
-    line::Line,
     point::Point,
     rect::Rect,
 };
@@ -209,32 +208,5 @@ impl Builder {
         let p2 = diff * 0.75;
 
         [p0, p1.into(), p2.into(), p3]
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn add_self_intersecting() {
-        // This test checks that the path builder correctly decomposes curves
-        // that have self-intersections. Since we only operate on cubic curves,
-        // only one self-intersection is possible per curve.
-
-        let p = {
-            let mut b = Builder::default();
-            b.move_to(Point::new(50.0, 10.0));
-            b.add_cubic(
-                Point::new(190.0, 190.0),
-                Point::new(10.0, 190.0),
-                Point::new(150.0, 10.0),
-            )
-            .unwrap();
-            b.build().unwrap()
-        };
-
-        assert_eq!(p.segments.len(), 1);
-        assert_eq!(p.points.len(), 10);
     }
 }

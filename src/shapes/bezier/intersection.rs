@@ -1,6 +1,6 @@
 use super::split2;
 use crate::{
-    math::cmp::{ApproxEq, max, min},
+    math::cmp::{max, min, ApproxEq},
     shapes::{line::Line, point::Point},
     utils::arrayvec::ArrayVec,
 };
@@ -22,59 +22,7 @@ pub fn find(a: &[Point; 4], b: &[Point; 4]) -> ArrayVec<(f32, f32), 9> {
 /// the t-values of the intersection if so.
 #[must_use]
 pub fn find_self(curve: &[Point; 4]) -> Option<(f32, f32)> {
-    // Instructions from "Resolution Independent Curve Rendering using
-    // Programmable Graphics Hardware by Charles Loop, Jim Blinn (2005)."
-
-    // Algorithm:
-    // 1. Classify the curve as a serpentine, cusp, or loop.
-    //
-    //   a. Convert the bezier control points into the power basis by the
-    //   product `C = M_3*B` within a homogenous coordinate system.
-    //
-    //   b. Calculate the vector `d = [d0, d1, d2, d3]` according to the formula:
-    //
-    //            x3 y3 w3            x3 y3 w3
-    //   d0 = det x2 y2 w2  d1 = -det x2 y2 w2
-    //            x1 y1 w1            x0 y0 w0
-    //
-    //           x3 y3 w3             x2 y2 w2
-    //  d2 = det x1 y1 w1   d3 = -det x1 y1 w1
-    //           x0 y0 w0             x0 y0 w0
-    //
-    //   c. Calculate a discriminant according to the formula
-    //   `4(p0*p2-p1^2)(p1*p3-p2^2)-(p1*p2-p0*p3)`.
-    //
-    //   d. If the discriminant is 0, the curve is a loop.
-    //
-    // 2. If the curve is a loop, calculate the real roots of the curve and
-    //    return it.
-    //
-    // 3. Else return None.
-
-    let a1 = {
-        let x0 = curve[0].x;
-        let y0 = curve[0].y;
-        let x1 = curve[1].x;
-        let y1 = curve[1].y;
-        let x2 = curve[2].x;
-        let y2 = curve[2].y;
-        let x3 = curve[3].x;
-        let y3 = curve[3].y;
-    };
-
-    let left = CurvePart::new(curve, 0.0, 0.5);
-    let right = CurvePart::new(curve, 0.5, 1.0);
-
-    let mut intersections = ArrayVec::new();
-    find_intersections_in_range(left, right, &mut intersections);
-
-    if intersections.is_empty() {
-        None
-    } else {
-        debug_assert!(intersections.len() == 1);
-        let (t1, t2) = intersections[0];
-        Some((t1, t2))
-    }
+    todo!()
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -202,10 +150,68 @@ fn find_intersections_in_range(
 /// Clips `a` against `b`, producing t-bounds where `a` lies within `b`'s fat
 /// line.
 fn clip(curve: &[Point; 4], against: &[Point; 4]) -> (f32, f32) {
+    // Computes the approximate region of the curve that lies above `line`.
+    fn clip_line(curve: &[Point; 4], line: &Line) -> (f32, f32) {
+        let e0 = Point::new(0.0, line.signed_distance_to(curve[0]));
+        let e1 = Point::new(1.0 / 3.0, line.signed_distance_to(curve[1]));
+        let e2 = Point::new(2.0 / 3.0, line.signed_distance_to(curve[2]));
+        let e3 = Point::new(1.0, line.signed_distance_to(curve[3]));
+
+        // Test the left of the curve (low-t)
+        let low = if e0.y < 0.0 {
+            let x1 = Line::between(e0, e1).x_intercept();
+            let x2 = Line::between(e0, e2).x_intercept();
+            let x3 = Line::between(e0, e3).x_intercept();
+
+            let mut min = 1.0;
+            if x1 > 0.0 {
+                min = min!(x1, min);
+            }
+            if x2 > 0.0 {
+                min = min!(x2, min);
+            }
+            if x3 > 0.0 {
+                min = min!(x3, min);
+            }
+            min
+        } else {
+            0.0
+        };
+
+        // Test the right of the curve (high-t)
+        let high = if e3.y < 0.0 {
+            let x1 = Line::between(e3, e0).x_intercept();
+            let x2 = Line::between(e3, e1).x_intercept();
+            let x3 = Line::between(e3, e2).x_intercept();
+
+            let mut max = 0.0;
+            if x1 < 1.0 {
+                max = max!(x1, max);
+            }
+            if x2 < 1.0 {
+                max = max!(x2, max);
+            }
+            if x3 < 1.0 {
+                max = max!(x3, max);
+            }
+            max
+        } else {
+            1.0
+        };
+
+        (low, high)
+    }
+
     let parallel = {
         let (min_line, max_line) = {
-            let (low, high) = fat_line_parallel(against);
-            (-low, high)
+            let thin = Line::between(against[0], against[3]);
+            let line1 = thin.parallel_through(against[1]);
+            let line2 = thin.parallel_through(against[2]);
+
+            (
+                -Line::with_c(thin, min!(thin.c, line1.c, line2.c)),
+                Line::with_c(thin, max!(thin.c, line1.c, line2.c)),
+            )
         };
 
         let min_clip = clip_line(curve, &min_line);
@@ -215,8 +221,16 @@ fn clip(curve: &[Point; 4], against: &[Point; 4]) -> (f32, f32) {
 
     let perpendicular = {
         let (min_line, max_line) = {
-            let (low, high) = fat_line_perpendicular(against);
-            (-low, high)
+            let thin = Line::between(against[0], against[3]);
+            let line0 = thin.perpendicular_through(against[0]);
+            let line1 = thin.perpendicular_through(against[1]);
+            let line2 = thin.perpendicular_through(against[2]);
+            let line3 = thin.perpendicular_through(against[3]);
+
+            (
+                -Line::with_c(line0, min!(line0.c, line1.c, line2.c, line3.c)),
+                Line::with_c(line0, max!(line0.c, line1.c, line2.c, line3.c)),
+            )
         };
 
         let min_clip = clip_line(curve, &min_line);
@@ -229,89 +243,6 @@ fn clip(curve: &[Point; 4], against: &[Point; 4]) -> (f32, f32) {
     } else {
         parallel
     }
-}
-
-/// Calculates the two lines that bound the curve. This is currently done using
-/// only the control points. A more refined method using inflection points may
-/// or may not improve performance (extra work per curve for possibly fewer
-/// clipping operations).
-fn fat_line_parallel(curve: &[Point; 4]) -> (Line, Line) {
-    let thin = Line::between(curve[0], curve[3]);
-    let line1 = thin.parallel_through(curve[1]);
-    let line2 = thin.parallel_through(curve[2]);
-
-    let min_c = min!(thin.c, line1.c, line2.c);
-    let max_c = max!(thin.c, line1.c, line2.c);
-    (Line::with_c(thin, min_c), Line::with_c(thin, max_c))
-}
-
-fn fat_line_perpendicular(curve: &[Point; 4]) -> (Line, Line) {
-    let thin = Line::between(curve[0], curve[3]);
-    let line0 = thin.perpendicular_through(curve[0]);
-    let line1 = thin.perpendicular_through(curve[1]);
-    let line2 = thin.perpendicular_through(curve[2]);
-    let line3 = thin.perpendicular_through(curve[3]);
-
-    (
-        Line::with_c(line0, min!(line0.c, line1.c, line2.c, line3.c)),
-        Line::with_c(line0, max!(line0.c, line1.c, line2.c, line3.c)),
-    )
-}
-
-/// Clips `curve` against `line`, returning a t-bound that is guaranteed to
-/// be 'above' the line (distance is positive).
-///
-/// This algorithm does not attempt to calculate the precise point of
-/// intersection, but only a close-enough approximation.
-fn clip_line(curve: &[Point; 4], line: &Line) -> (f32, f32) {
-    let e0 = Point::new(0.0, line.signed_distance_to(curve[0]));
-    let e1 = Point::new(1.0 / 3.0, line.signed_distance_to(curve[1]));
-    let e2 = Point::new(2.0 / 3.0, line.signed_distance_to(curve[2]));
-    let e3 = Point::new(1.0, line.signed_distance_to(curve[3]));
-
-    // Test the left of the curve (low-t)
-    let low = if e0.y < 0.0 {
-        let x1 = Line::between(e0, e1).x_intercept();
-        let x2 = Line::between(e0, e2).x_intercept();
-        let x3 = Line::between(e0, e3).x_intercept();
-        // Smallest value in the range (0, 1)
-        let mut min = 1.0;
-        if x1 > 0.0 {
-            min = min!(x1, min);
-        }
-        if x2 > 0.0 {
-            min = min!(x2, min);
-        }
-        if x3 > 0.0 {
-            min = min!(x3, min);
-        }
-        min
-    } else {
-        0.0
-    };
-
-    // Test the right of the curve (high-t)
-    let high = if e3.y < 0.0 {
-        let x1 = Line::between(e3, e0).x_intercept();
-        let x2 = Line::between(e3, e1).x_intercept();
-        let x3 = Line::between(e3, e2).x_intercept();
-        // Largest value in the range (0, 1)
-        let mut max = 0.0;
-        if x1 < 1.0 {
-            max = max!(x1, max);
-        }
-        if x2 < 1.0 {
-            max = max!(x2, max);
-        }
-        if x3 < 1.0 {
-            max = max!(x3, max);
-        }
-        max
-    } else {
-        1.0
-    };
-
-    (low, high)
 }
 
 #[cfg(test)]
@@ -434,41 +365,5 @@ mod test {
 
         let curve1_limits = super::clip(&curve1, &curve2);
         assert_eq!(curve1_limits, (0.18543269, 0.91614604));
-    }
-
-    #[test]
-    fn fat_line() {
-        let curve = [
-            Point::new(18.0, 122.0),
-            Point::new(15.0, 178.0),
-            Point::new(247.0, 173.0),
-            Point::new(251.0, 242.0),
-        ];
-
-        let thin = Line::between(curve[0], curve[3]);
-        let (low, high) = super::fat_line_parallel(&curve);
-
-        assert!(low.c.approx_eq(&40.70803));
-        assert!(high.c.approx_eq(&151.37787));
-
-        assert!(thin.a.approx_eq(&low.a));
-        assert!(thin.b.approx_eq(&low.b));
-
-        assert!(low.signed_distance_to(curve[2]).approx_eq(&0.0));
-        assert!(high.signed_distance_to(curve[1]).approx_eq(&0.0));
-    }
-
-    #[test]
-    fn clip_line() {
-        let line = Line::new(0.0, 0.0, 1.0);
-        let curve = [
-            Point::new(24.0, 21.0),
-            Point::new(189.0, 40.0),
-            Point::new(159.0, 137.0),
-            Point::new(101.0, 261.0),
-        ];
-
-        let clip = super::clip_line(&curve, &line);
-        assert_eq!(clip, (0.0, 1.0));
     }
 }

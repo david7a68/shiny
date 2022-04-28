@@ -155,8 +155,6 @@ impl<'a> Bezier for CubicSlice<'a> {
 }
 
 fn evaluate(bezier: &[Point; 4], t: f32) -> Point {
-    // let t_inv = 1.0 - t;
-    // ((t_inv.powf(3.0) * self.p0.vec()) + (3.0 * t_inv.powf(2.0) * t * self.p1.vec()) + (3.0 * t_inv * t.powf(2.0) * self.p2.vec()) + (t.powf(3.0) * self.p3.vec())).into()
     let t = Mat1x4::new(1.0, t, t.powf(2.0), t.powf(3.0));
     #[rustfmt::skip]
     let m = Mat4x4::new(
@@ -179,18 +177,6 @@ fn evaluate(bezier: &[Point; 4], t: f32) -> Point {
 }
 
 fn coarse_bounds(bezier: &[Point; 4]) -> Rect {
-    // let x_min = self.p0.x().min(self.p1.x()).min(self.p2.x().min(self.p2.x()));
-    // let x_max = self.p0.x().max(self.p1.x()).max(self.p2.x().max(self.p2.x()));
-    // let y_min = self.p0.y().min(self.p1.y()).min(self.p2.y().min(self.p2.y()));
-    // let y_max = self.p0.y().max(self.p1.y()).max(self.p2.y().max(self.p2.y()));
-
-    // BoundingBox {
-    //     left: x_min,
-    //     right: x_max,
-    //     top: y_min,
-    //     bottom: y_max
-    // }
-
     let a = Float4::new(bezier[0].x, bezier[0].y, bezier[1].x, bezier[1].y);
     let b = Float4::new(bezier[2].x, bezier[2].y, bezier[3].x, bezier[3].y);
 
