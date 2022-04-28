@@ -1,66 +1,24 @@
 use crate::math::cmp::ApproxEq;
 
-use super::{
-    bezier::{Bezier, Cubic, CubicSlice},
-    point::Point,
-    rect::Rect,
-};
+use super::{bezier::CubicSlice, point::Point};
 
 #[derive(Debug)]
 pub struct Path {
-    segments: Box<[PathSegment]>,
-    points: Box<[Point]>,
-}
-
-impl Path {
-    /// Returns an iterator over each subpath in this (possibly) compound path.
-    #[must_use]
-    pub fn iter(&self) -> SubPathIterator {
-        SubPathIterator {
-            path: self,
-            cursor: 0,
-        }
-    }
-}
-
-/// Iterates over each subpath that makes up a compound path.
-pub struct SubPathIterator<'a> {
-    path: &'a Path,
-    cursor: usize,
-}
-
-impl<'a> Iterator for SubPathIterator<'a> {
-    type Item = SegmentIterator<'a>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.cursor < self.path.segments.len() {
-            let segment = self.path.segments[self.cursor];
-            self.cursor += 1;
-
-            Some(SegmentIterator {
-                path: self.path,
-                cursor: segment.first,
-                segment_end: segment.one_past_end,
-            })
-        } else {
-            None
-        }
-    }
+    pub segments: Vec<Segment>,
 }
 
 /// Iterates over each segment in a subpath of a compound path.
 pub struct SegmentIterator<'a> {
-    path: &'a Path,
+    path: &'a [Point],
     cursor: usize,
-    segment_end: usize,
 }
 
 impl<'a> Iterator for SegmentIterator<'a> {
     type Item = CubicSlice<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.cursor + 3 < self.segment_end {
-            let slice = &self.path.points[self.cursor..self.cursor + 4];
+        if self.cursor + 3 < self.path.len() {
+            let slice = &self.path[self.cursor..self.cursor + 4];
             self.cursor += 3;
 
             Some(CubicSlice::new(slice.try_into().unwrap()))
@@ -70,11 +28,18 @@ impl<'a> Iterator for SegmentIterator<'a> {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
-struct PathSegment {
-    first: usize,
-    one_past_end: usize,
-    bounds: Rect,
+#[derive(Clone, Debug)]
+pub struct Segment {
+    points: Vec<Point>,
+}
+
+impl Segment {
+    pub fn curves(&self) -> SegmentIterator {
+        SegmentIterator {
+            path: &self.points,
+            cursor: 0,
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -86,43 +51,22 @@ pub enum Error {
 
 #[derive(Default)]
 pub struct Builder {
-    segments: Vec<PathSegment>,
-    points: Vec<Point>,
-    segment_index: Option<usize>,
+    segments: Vec<Segment>,
 }
-
-// states
-//  no curve
-//  started curve (has path_start_offset, points.len() > 0)
-//  next curve (has path_start_offsset, points.len() > 0)
 
 impl Builder {
     pub fn move_to(&mut self, point: Point) {
-        if let Some(index) = self.segment_index.take() {
-            // Close out the previous segment.
-            self.segments[index].one_past_end = self.points.len();
-        }
-
-        self.segment_index = Some(self.segments.len());
-        self.segments.push(PathSegment {
-            first: self.points.len(),
-            one_past_end: 0,
-            bounds: Rect::new(point.x, point.x, point.y, point.y),
+        self.segments.push(Segment {
+            points: vec![point],
         });
-
-        self.points.push(point);
     }
 
     pub fn line_to(&mut self, point: Point) -> Result<(), Error> {
-        if let Some(index) = self.segment_index {
-            // Adjust bounding box to include this line.
-            self.segments[index].bounds += Rect::enclosing(&[point]);
-
-            // Add the line as a cubic bezier.
-            let points = Self::line_points(self.points[self.points.len() - 1], point);
-            self.points.push(points[1]);
-            self.points.push(points[2]);
-            self.points.push(points[2]);
+        if let Some(segment) = self.segments.last_mut() {
+            let points = Self::line_as_cubic(segment.points[segment.points.len() - 1], point);
+            segment.points.push(points[1]);
+            segment.points.push(points[2]);
+            segment.points.push(points[2]);
             Ok(())
         } else {
             Err(Error::PathNotStarted)
@@ -130,30 +74,10 @@ impl Builder {
     }
 
     pub fn add_cubic(&mut self, p1: Point, p2: Point, p3: Point) -> Result<(), Error> {
-        if let Some(index) = self.segment_index {
-            self.segments[index].bounds += Rect::enclosing(&[p1, p2, p3]);
-
-            let curve = Cubic::new(self.points[self.points.len() - 1], p1, p2, p3);
-            if let Some((a, b)) = curve.find_self_intersection() {
-                let (a, b, c) = curve.split2(a, b);
-
-                self.points.push(a.points[1]);
-                self.points.push(a.points[2]);
-                self.points.push(a.points[3]);
-                debug_assert!(a.points[3] == b.points[0]);
-                self.points.push(b.points[1]);
-                self.points.push(b.points[2]);
-                self.points.push(b.points[3]);
-                debug_assert!(b.points[3] == c.points[0]);
-                self.points.push(c.points[1]);
-                self.points.push(c.points[2]);
-                self.points.push(c.points[3]);
-            } else {
-                self.points.push(p1);
-                self.points.push(p2);
-                self.points.push(p3);
-            }
-
+        if let Some(segment) = self.segments.last_mut() {
+            segment.points.push(p1);
+            segment.points.push(p2);
+            segment.points.push(p3);
             Ok(())
         } else {
             Err(Error::PathNotStarted)
@@ -161,24 +85,18 @@ impl Builder {
     }
 
     pub fn close(&mut self) -> Result<(), Error> {
-        if let Some(index) = self.segment_index.take() {
+        if let Some(segment) = self.segments.last_mut() {
             // Create a line closing the path iff the start and end points are
             // not equal.
-            let start = self.points[self.segments[index].first];
-            let end = self.points[self.points.len() - 1];
+            let start = segment.points.first().unwrap();
+            let end = segment.points[segment.points.len() - 1];
 
             if !start.approx_eq(&end) {
-                let points = Self::line_points(end, start);
-                self.points.push(points[1]);
-                self.points.push(points[2]);
-                self.points.push(points[3]);
+                let points = Self::line_as_cubic(end, *start);
+                segment.points.push(points[1]);
+                segment.points.push(points[2]);
+                segment.points.push(points[3]);
             }
-
-            // No need to adjust the bounding box, since we're working within
-            // the convex hull of the bounding box (no way to generate a line
-            // that lies outside of the bounds).
-
-            self.segments[index].one_past_end = self.points.len();
 
             Ok(())
         } else {
@@ -188,21 +106,16 @@ impl Builder {
 
     #[must_use]
     pub fn cursor(&self) -> Option<Point> {
-        if self.points.is_empty() {
-            None
-        } else {
-            Some(self.points[self.points.len() - 1])
-        }
+        self.segments.last().map(|s| *s.points.last().unwrap())
     }
 
     pub fn build(self) -> Result<Path, Error> {
         Ok(Path {
-            segments: self.segments.into_boxed_slice(),
-            points: self.points.into_boxed_slice(),
+            segments: self.segments,
         })
     }
 
-    fn line_points(p0: Point, p3: Point) -> [Point; 4] {
+    fn line_as_cubic(p0: Point, p3: Point) -> [Point; 4] {
         let diff = p3 - p0;
         let p1 = diff * 0.25;
         let p2 = diff * 0.75;

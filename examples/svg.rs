@@ -25,8 +25,8 @@ fn main() {
     let color = Color::auto(0.5, 0.8, 0.9, 1.0);
 
     for path in paths {
-        for segment in path.iter() {
-            for curve in segment {
+        for segment in &path.segments {
+            for curve in segment.curves() {
                 let mut t = 0.0;
                 let delta = 0.0001;
                 loop {
