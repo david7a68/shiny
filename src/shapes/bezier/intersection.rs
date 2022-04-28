@@ -1,11 +1,8 @@
 use super::split2;
 use crate::{
-    math::cmp::ApproxEq,
+    math::cmp::{ApproxEq, max, min},
     shapes::{line::Line, point::Point},
-    utils::{
-        arrayvec::ArrayVec,
-        cmp::{max, min},
-    },
+    utils::arrayvec::ArrayVec,
 };
 
 /// Calculates the t-value for every intersection between the two curves `a` and
