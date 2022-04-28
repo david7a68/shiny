@@ -25,8 +25,8 @@ fn main() {
     let color = Color::auto(0.5, 0.8, 0.9, 1.0);
 
     for path in paths {
-        for segment in &path.segments {
-            for curve in segment.curves() {
+        for segment in path.iter() {
+            for curve in segment {
                 let mut t = 0.0;
                 let delta = 0.0001;
                 loop {
@@ -55,6 +55,7 @@ fn read_svg(data: &str) -> Vec<Path> {
     let mut paths = vec![];
     let mut num_paths = 0;
     let mut num_segments = 0;
+    let mut longest_path = 0;
 
     // for each svg element
     for node in svg {
@@ -138,16 +139,22 @@ fn read_svg(data: &str) -> Vec<Path> {
                 }
             }
 
-            paths.push(path.build().unwrap());
+            let p = path.build().unwrap();
+            if p.points.len() > longest_path {
+                longest_path = p.points.len();
+            }
+
+            paths.push(p);
         }
     }
 
     println!(
-        "num_paths (expected): {}, num_paths (reported): {}, num_segments: {}, avg segments/path: {:.4}",
+        "num_paths (expected): {}, num_paths (reported): {}, num_segments: {}, avg segments/path: {:.4}, longest path: {}",
         num_paths,
         paths.len(),
         num_segments,
-        num_segments as f32 / num_paths as f32
+        num_segments as f32 / num_paths as f32,
+        longest_path,
     );
     paths
 }
