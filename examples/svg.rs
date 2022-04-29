@@ -2,47 +2,38 @@ mod common;
 use common::*;
 
 use shiny::{
+    backends::software::Software,
+    canvas::{Canvas, CanvasOps},
     color::{Color, Space as ColorSpace},
     image::{Image, PixelFormat},
-    math::vector2::Vec2,
-    pixel_buffer::PixelBuffer,
+    paint::PaintConfig,
     shapes::{
-        bezier::Bezier,
         path::{Builder as PathBuilder, Path},
         point::Point,
     },
 };
 
 fn main() {
-    // let file = std::fs::read_to_string("./test_files/tiger.svg").unwrap();
-    let file = std::fs::read_to_string("./test_files/car.svg").unwrap();
+    let backend = Software::new();
+    let mut canvas = backend
+        .new_canvas(4000, 2000, PixelFormat::Rgb10a2, ColorSpace::LinearSrgb)
+        .unwrap();
+    canvas.clear(Color::BLACK);
 
+    let paint = canvas.create_paint(PaintConfig {
+        fill_color: Color::RED,
+        stroke_color: Color::GREEN,
+    });
+
+    let file = std::fs::read_to_string("./test_files/tiger.svg").unwrap();
+    // let file = std::fs::read_to_string("./test_files/car.svg").unwrap();
     let paths = read_svg(&file);
-
-    let mut image = PixelBuffer::new(4000, 2000, PixelFormat::Rgba8, ColorSpace::Srgb).unwrap();
-    image.clear(Color::auto(0.0, 0.0, 0.0, 1.0));
-
-    let color = Color::auto(0.5, 0.8, 0.9, 1.0);
-
-    for path in paths {
-        for segment in path.iter() {
-            for curve in segment {
-                let mut t = 0.0;
-                let delta = 0.0001;
-                loop {
-                    if t >= 1.0 {
-                        break;
-                    }
-
-                    let p = curve.at(t) + Vec2::new(100.0, 100.0);
-                    image.set(p.x.round() as u32, p.y.round() as u32, color);
-                    t += delta;
-                }
-            }
-        }
+    for path in &paths {
+        canvas.fill_path(path, paint);
     }
 
     println!("writing images");
+    let image = canvas.get_pixels();
     write_png(image.get_pixels(), module_path!());
     let linear = image.convert(PixelFormat::Rgb10a2, ColorSpace::LinearSrgb);
     write_png(linear.get_pixels(), "hahaha");
@@ -56,11 +47,12 @@ fn read_svg(data: &str) -> Vec<Path> {
     let mut num_paths = 0;
     let mut num_segments = 0;
     let mut longest_path = 0;
+    let mut longest_path_idx = 0;
 
     // for each svg element
     for node in svg {
         // extract only path information
-        for p in node.descendants().filter(|n| n.tag_name().name() == "path") {
+        'path: for p in node.descendants().filter(|n| n.tag_name().name() == "path") {
             let mut path = PathBuilder::default();
 
             let d = p.attribute("d").unwrap();
@@ -114,12 +106,15 @@ fn read_svg(data: &str) -> Vec<Path> {
                     }
                     svgtypes::PathSegment::SmoothCurveTo { abs, x2, y2, x, y } => {
                         println!("smooth cubic");
+                        break 'path;
                     }
                     svgtypes::PathSegment::Quadratic { abs, x1, y1, x, y } => {
                         println!("quadratic");
+                        break 'path;
                     }
                     svgtypes::PathSegment::SmoothQuadratic { abs, x, y } => {
                         println!("smooth quadratic");
+                        break 'path;
                     }
                     svgtypes::PathSegment::EllipticalArc {
                         abs,
@@ -132,6 +127,7 @@ fn read_svg(data: &str) -> Vec<Path> {
                         y,
                     } => {
                         println!("arc");
+                        break 'path;
                     }
                     svgtypes::PathSegment::ClosePath { abs } => {
                         path.close().unwrap();
@@ -142,6 +138,7 @@ fn read_svg(data: &str) -> Vec<Path> {
             let p = path.build().unwrap();
             if p.points.len() > longest_path {
                 longest_path = p.points.len();
+                longest_path_idx = paths.len();
             }
 
             paths.push(p);
@@ -149,12 +146,13 @@ fn read_svg(data: &str) -> Vec<Path> {
     }
 
     println!(
-        "num_paths (expected): {}, num_paths (reported): {}, num_segments: {}, avg segments/path: {:.4}, longest path: {}",
+        "num_paths (expected): {}, num_paths (reported): {}, num_segments: {}, avg segments/path: {:.4}, longest path: {}, longest path idx: {}",
         num_paths,
         paths.len(),
         num_segments,
         num_segments as f32 / num_paths as f32,
         longest_path,
+        longest_path_idx
     );
     paths
 }

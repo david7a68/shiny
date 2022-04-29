@@ -6,6 +6,7 @@ use std::{
 use crate::math::{
     cmp::{max, min},
     simd::Float4,
+    vector2::Vec2,
 };
 
 use super::point::Point;
@@ -58,6 +59,34 @@ impl Rect {
     #[must_use]
     pub fn bottom(&self) -> f32 {
         self.0.d()
+    }
+
+    #[must_use]
+    pub fn extent(&self) -> Vec2 {
+        Vec2::new(self.right() - self.left(), self.top() - self.bottom())
+    }
+
+    #[must_use]
+    pub fn origin(&self) -> Point {
+        Point::new(self.left(), self.bottom())
+    }
+
+    #[must_use]
+    pub fn width(&self) -> f32 {
+        self.right() - self.left()
+    }
+
+    #[must_use]
+    pub fn height(&self) -> f32 {
+        self.top() - self.bottom()
+    }
+
+    #[must_use]
+    pub fn centroid(&self) -> Point {
+        Point::new(
+            (self.left() + self.right()) / 2.0,
+            (self.top() + self.bottom()) / 2.0,
+        )
     }
 
     #[must_use]

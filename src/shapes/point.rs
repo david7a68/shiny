@@ -1,4 +1,7 @@
-use std::ops::{Add, Sub};
+use std::{
+    hash::Hash,
+    ops::{Add, Sub},
+};
 
 use crate::math::{
     cmp::{ApproxEq, F32_APPROX_EQUAL_THRESHOLD},
@@ -7,7 +10,7 @@ use crate::math::{
 };
 
 /// A point in 2D space.
-#[derive(Clone, Copy, Debug, Default, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Point {
     pub x: f32,
     pub y: f32,
@@ -70,5 +73,12 @@ impl ApproxEq for Point {
 
     fn approx_eq_within(&self, other: &Self, epsilon: f32) -> bool {
         self.x.approx_eq_within(&other.x, epsilon) && self.y.approx_eq_within(&other.y, epsilon)
+    }
+}
+
+impl Hash for Point {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        state.write_u32(self.x.to_bits());
+        state.write_u32(self.y.to_bits());
     }
 }

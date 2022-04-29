@@ -33,7 +33,7 @@ pub trait Bezier: Sized {
 }
 
 /// A cubic bezier curve.
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Cubic {
     pub points: [Point; 4],
 }
@@ -99,7 +99,7 @@ impl Bezier for Cubic {
 /// composites of several curves, where the first and last point can be shared
 /// with the curves before and after, respectively. This can significantly
 /// reduce the number of points that need to be stored.
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct CubicSlice<'a> {
     pub points: &'a [Point; 4],
 }
@@ -230,9 +230,9 @@ mod tests {
             ],
         };
 
-        assert_eq!(bezier.at(0.0), Point::new(10.0, 5.0));
-        assert_eq!(bezier.at(0.5), Point::new(7.625, 14.125));
-        assert_eq!(bezier.at(1.0), Point::new(6.0, 15.0));
+        assert!(bezier.at(0.0).approx_eq(&Point::new(10.0, 5.0)));
+        assert!(bezier.at(0.5).approx_eq(&Point::new(7.625, 14.125)));
+        assert!(bezier.at(1.0).approx_eq(&Point::new(6.0, 15.0)));
     }
 
     #[test]

@@ -2,10 +2,7 @@ use crate::{
     color::Color,
     paint::{Paint, PaintConfig},
     pixel_buffer::PixelBuffer,
-    shapes::{
-        path::{Builder as PathBuilder, Path},
-        rect::Rect,
-    },
+    shapes::path::{Builder as PathBuilder, Path},
 };
 
 /// A 2D drawing context.
@@ -24,20 +21,9 @@ pub trait Canvas: CanvasOps {
     fn get_pixels(&self) -> PixelBuffer;
 }
 
-/// A rectangular subset of a canvas.
-///
-/// The coordinate system is reset, such that the top-left corner of the clipped
-/// canvas is (0, 0), instead of the actual canvas' origin.
-pub trait ClippedCanvas: CanvasOps {
-    /// Returns the offset of the clip region relative to the canvas' origin.
-    fn clip_offset(&self) -> (f32, f32);
-}
-
 /// Operations for rendering shapes to a render target, and querying its
 /// properties.
 pub trait CanvasOps {
-    type Clipped: ClippedCanvas;
-
     /// The width of the drawable area.
     fn width(&self) -> u32;
 
@@ -46,14 +32,6 @@ pub trait CanvasOps {
 
     /// Clears the area's contents to the given color.
     fn clear(&mut self, color: Color);
-
-    /// Creates a sub-area to draw to. Coordinates within the clipped area are
-    /// relative to the clip's origin, with corresponding width and height.
-    ///
-    /// If the clip region is larger than the drawable area, or extends outside
-    /// of the drawable area, the region outside of the drawable area will also
-    /// be clipped.
-    fn clip(&mut self, rect: Rect) -> Self::Clipped;
 
     /// Creates a new, immutable paint object, and returns a reference to it.
     /// This allows the backend to cache the paint object in an

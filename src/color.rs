@@ -70,6 +70,16 @@ impl Color {
         space: Space::Unknown,
     };
 
+    pub const BRIGHT_PINK: Self = Color {
+        r: 1.0,
+        g: 0.0,
+        b: 127.0 / 255.0,
+        a: 1.0,
+        space: Space::Unknown,
+    };
+
+    pub const DEFAULT: Self = Self::BRIGHT_PINK;
+
     pub fn auto(r: f32, g: f32, b: f32, a: f32) -> Self {
         Color {
             r,
@@ -195,6 +205,12 @@ impl Color {
             (self.b * u8::MAX as f32).round() as u8,
             (self.a * u8::MAX as f32).round() as u8,
         ]
+    }
+}
+
+impl Default for Color {
+    fn default() -> Self {
+        Self::BRIGHT_PINK
     }
 }
 

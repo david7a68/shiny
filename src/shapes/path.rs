@@ -1,7 +1,10 @@
+use std::hash::Hash;
+
 use crate::math::cmp::ApproxEq;
 
 use super::{bezier::CubicSlice, point::Point};
 
+#[derive(Hash)]
 pub struct Path {
     pub segments: Vec<Segment>,
     pub points: Vec<Point>,
@@ -16,10 +19,10 @@ impl Path {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Hash)]
 pub struct Segment {
-    start: u32,
-    end: u32,
+    pub start: u32,
+    pub end: u32,
 }
 
 pub struct SegmentIter<'a> {
@@ -44,10 +47,9 @@ impl<'a> Iterator for SegmentIter<'a> {
         if self.index < self.path.segments.len() as u32 {
             let segment = &self.path.segments[self.index as usize];
             self.index += 1;
-            Some(CurveIter {
-                points: &self.path.points[segment.start as usize..(segment.end as usize)],
-                index: 0,
-            })
+            Some(CurveIter::over_points(
+                &self.path.points[segment.start as usize..(segment.end as usize)],
+            ))
         } else {
             None
         }
@@ -57,6 +59,12 @@ impl<'a> Iterator for SegmentIter<'a> {
 pub struct CurveIter<'a> {
     points: &'a [Point],
     index: u32,
+}
+
+impl<'a> CurveIter<'a> {
+    pub fn over_points(points: &'a [Point]) -> CurveIter<'a> {
+        CurveIter { points, index: 0 }
+    }
 }
 
 impl<'a> Iterator for CurveIter<'a> {

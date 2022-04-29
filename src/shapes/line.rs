@@ -146,7 +146,7 @@ mod tests {
         {
             // vertical line
             let line = Line::between(Point::new(5.0, 1.0), Point::new(5.0, 12.0));
-            assert_eq!(line.y_at(1.0), None);
+            assert!(line.y_at(1.0).is_none());
         }
         {
             // horizontal line
