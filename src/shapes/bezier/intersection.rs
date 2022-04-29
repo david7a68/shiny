@@ -18,13 +18,6 @@ pub fn find(a: &[Point; 4], b: &[Point; 4]) -> ArrayVec<(f32, f32), 9> {
     intersections
 }
 
-/// Checks if the curve intersects with itself (forms a loop), and identifies
-/// the t-values of the intersection if so.
-#[must_use]
-pub fn find_self(curve: &[Point; 4]) -> Option<(f32, f32)> {
-    todo!()
-}
-
 #[derive(Debug, Clone, Copy)]
 struct CurvePart<'a> {
     points: &'a [Point; 4],

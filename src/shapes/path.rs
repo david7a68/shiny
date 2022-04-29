@@ -7,6 +7,10 @@ use super::{bezier::CubicSlice, point::Point};
 #[derive(Hash)]
 pub struct Path {
     pub segments: Vec<Segment>,
+    // TODO: Convert this into two vecs, one for x, and one for y. This will
+    // allow us to do some more & better work with SIMD such as faster bounding
+    // box computations and curve evalution (if CubicBezier & CubicSlice are
+    // switched too).
     pub points: Vec<Point>,
 }
 

@@ -49,17 +49,6 @@ fn main() {
         t += delta;
     }
 
-    if let Some((a, b)) = curve.find_self_intersection() {
-        let p1 = curve.at(a);
-        let p2 = curve.at(b);
-
-        println!("{:?}", p1);
-        println!("{:?}", p2);
-        image.set(p1.x as u32, p1.y as u32, Color::GREEN);
-    } else {
-        println!("No self intersection");
-    }
-
     let bounds = curve.coarse_bounds();
     image.set(bounds.left() as u32, bounds.top() as u32, Color::BLUE);
     image.set(bounds.right() as u32, bounds.top() as u32, Color::BLUE);

@@ -27,9 +27,6 @@ pub trait Bezier: Sized {
 
     #[must_use]
     fn find_intersections(&self, other: &Self) -> ArrayVec<(f32, f32), 9>;
-
-    #[must_use]
-    fn find_self_intersection(&self) -> Option<(f32, f32)>;
 }
 
 /// A cubic bezier curve.
@@ -88,11 +85,6 @@ impl Bezier for Cubic {
     fn find_intersections(&self, other: &Self) -> ArrayVec<(f32, f32), 9> {
         intersection::find(&self.points, &other.points)
     }
-
-    #[inline]
-    fn find_self_intersection(&self) -> Option<(f32, f32)> {
-        intersection::find_self(&self.points)
-    }
 }
 
 /// A cubic bezier curve as a reference to a slice of 4 points. Useful for e.g.
@@ -146,11 +138,6 @@ impl<'a> Bezier for CubicSlice<'a> {
     #[inline]
     fn find_intersections(&self, other: &Self) -> ArrayVec<(f32, f32), 9> {
         intersection::find(self.points, other.points)
-    }
-
-    #[inline]
-    fn find_self_intersection(&self) -> Option<(f32, f32)> {
-        intersection::find_self(self.points)
     }
 }
 
