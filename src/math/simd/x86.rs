@@ -89,6 +89,12 @@ pub fn swap_high_low(v: Float4) -> Float4 {
 
 #[inline]
 #[must_use]
+pub fn combine_high_low(a: Float4, b: Float4) -> Float4 {
+    unsafe { _mm_shuffle_ps(a, b, _MM_SHUFFLE(2, 3, 0, 1)) }
+}
+
+#[inline]
+#[must_use]
 pub fn add(lhs: Float4, rhs: Float4) -> Float4 {
     unsafe { _mm_add_ps(lhs, rhs) }
 }
@@ -115,6 +121,41 @@ pub fn div(lhs: Float4, rhs: Float4) -> Float4 {
 #[must_use]
 pub fn min(lhs: Float4, rhs: Float4) -> Float4 {
     unsafe { _mm_min_ps(lhs, rhs) }
+}
+
+#[inline]
+#[must_use]
+pub fn horizontal_min4(mut a: Float4, mut b: Float4, mut c: Float4, mut d: Float4) -> Float4 {
+    unsafe {
+        _MM_TRANSPOSE4_PS(&mut a, &mut b, &mut c, &mut d);
+        _mm_min_ps(_mm_min_ps(a, b), _mm_min_ps(c, d))
+    }
+}
+
+#[inline]
+#[must_use]
+pub fn horizontal_max4(mut a: Float4, mut b: Float4, mut c: Float4, mut d: Float4) -> Float4 {
+    unsafe {
+        _MM_TRANSPOSE4_PS(&mut a, &mut b, &mut c, &mut d);
+        _mm_max_ps(_mm_max_ps(a, b), _mm_max_ps(c, d))
+    }
+}
+
+#[inline]
+#[must_use]
+pub fn horizontal_min_max4(
+    mut a: Float4,
+    mut b: Float4,
+    mut c: Float4,
+    mut d: Float4,
+) -> (Float4, Float4) {
+    unsafe {
+        _MM_TRANSPOSE4_PS(&mut a, &mut b, &mut c, &mut d);
+        (
+            _mm_min_ps(_mm_min_ps(a, b), _mm_min_ps(c, d)),
+            _mm_max_ps(_mm_max_ps(a, b), _mm_max_ps(c, d)),
+        )
+    }
 }
 
 #[inline]

@@ -24,17 +24,18 @@ fn main() {
     //     Point::new(150.0, 10.0),
     // ];
 
-    let mut points = [
-        Point::new(78.17871, -45.604248),
-        Point::new(3004.715, 1307.1124),
-        Point::new(2961.2825, 1202.874),
-        Point::new(2917.8499, 1202.874),
-    ];
-    for p in &mut points {
-        *p = (Vec2::new(100.0, 100.0) + p.vec() * 0.1).into();
+    let mut x = [78.17871, 3004.715, 2961.2825, 2917.8499,];
+    let mut y = [-45.604248, 1307.1124, 1202.874, 1202.874,];
+
+    for x in &mut x {
+        *x = 100.0 + *x * 0.1;
     }
 
-    let curve = CubicSlice::new(&points);
+    for y in &mut y {
+        *y = 100.0 + *y * 0.1;
+    }
+
+    let curve = CubicSlice::new(&x, &y);
 
     let mut t = 0.0;
     let delta = 0.001;

@@ -3,6 +3,9 @@ name = "shiny"
 version = "0.1.0"
 edition = "2021"
 
+[profile.release]
+debug = 2
+
 [features]
 default = ["backend-software"]
 backend-software = []

@@ -17,6 +17,18 @@ pub trait Bezier: Sized {
     fn at(&self, t: f32) -> Point;
 
     #[must_use]
+    fn p0(&self) -> Point;
+
+    #[must_use]
+    fn p1(&self) -> Point;
+
+    #[must_use]
+    fn p2(&self) -> Point;
+
+    #[must_use]
+    fn p3(&self) -> Point;
+
+    #[must_use]
     fn coarse_bounds(&self) -> Rect;
 
     #[must_use]
@@ -30,22 +42,24 @@ pub trait Bezier: Sized {
 }
 
 /// A cubic bezier curve.
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug)]
 pub struct Cubic {
-    pub points: [Point; 4],
+    pub x: [f32; 4],
+    pub y: [f32; 4],
 }
 
 impl Cubic {
     #[must_use]
     pub fn new(p1: Point, p2: Point, p3: Point, p4: Point) -> Self {
         Self {
-            points: [p1, p2, p3, p4],
+            x: [p1.x, p2.x, p3.x, p4.x],
+            y: [p1.y, p2.y, p3.y, p4.y],
         }
     }
 
     #[must_use]
     pub fn borrow(&self) -> CubicSlice {
-        CubicSlice::new(&self.points)
+        CubicSlice::new(&self.x, &self.y)
     }
 }
 
@@ -54,36 +68,47 @@ impl Bezier for Cubic {
 
     #[inline]
     fn at(&self, t: f32) -> Point {
-        evaluate(&self.points, t)
+        evaluate(self.borrow(), t)
+    }
+
+    #[inline]
+    fn p0(&self) -> Point {
+        Point::new(self.x[0], self.y[0])
+    }
+
+    #[inline]
+    fn p1(&self) -> Point {
+        Point::new(self.x[1], self.y[1])
+    }
+
+    #[inline]
+    fn p2(&self) -> Point {
+        Point::new(self.x[2], self.y[2])
+    }
+
+    #[inline]
+    fn p3(&self) -> Point {
+        Point::new(self.x[3], self.y[3])
     }
 
     #[inline]
     fn coarse_bounds(&self) -> Rect {
-        coarse_bounds(&self.points)
+        coarse_bounds(self.borrow())
     }
 
     #[inline]
     fn split(&self, t: f32) -> (Self::Owning, Self::Owning) {
-        let (left, right) = split(&self.points, t);
-        (
-            Self::Owning { points: left },
-            Self::Owning { points: right },
-        )
+        split(self.borrow(), t)
     }
 
     #[inline]
     fn split2(&self, t1: f32, t2: f32) -> (Self::Owning, Self::Owning, Self::Owning) {
-        let (left, center, right) = split2(&self.points, t1, t2);
-        (
-            Self::Owning { points: left },
-            Self::Owning { points: center },
-            Self::Owning { points: right },
-        )
+        split2(self.borrow(), t1, t2)
     }
 
     #[inline]
     fn find_intersections(&self, other: &Self) -> ArrayVec<(f32, f32), 9> {
-        intersection::find(&self.points, &other.points)
+        intersection::find(self.borrow(), other.borrow())
     }
 }
 
@@ -93,13 +118,14 @@ impl Bezier for Cubic {
 /// reduce the number of points that need to be stored.
 #[derive(Clone, Copy, Debug)]
 pub struct CubicSlice<'a> {
-    pub points: &'a [Point; 4],
+    pub x: &'a [f32; 4],
+    pub y: &'a [f32; 4],
 }
 
 impl<'a> CubicSlice<'a> {
     #[must_use]
-    pub fn new(points: &'a [Point; 4]) -> Self {
-        Self { points }
+    pub fn new(x: &'a [f32; 4], y: &'a [f32; 4]) -> Self {
+        Self { x, y }
     }
 }
 
@@ -108,40 +134,51 @@ impl<'a> Bezier for CubicSlice<'a> {
 
     #[inline]
     fn at(&self, t: f32) -> Point {
-        evaluate(self.points, t)
+        evaluate(*self, t)
+    }
+
+    #[inline]
+    fn p0(&self) -> Point {
+        Point::new(self.x[0], self.y[0])
+    }
+
+    #[inline]
+    fn p1(&self) -> Point {
+        Point::new(self.x[1], self.y[1])
+    }
+
+    #[inline]
+    fn p2(&self) -> Point {
+        Point::new(self.x[2], self.y[2])
+    }
+
+    #[inline]
+    fn p3(&self) -> Point {
+        Point::new(self.x[3], self.y[3])
     }
 
     #[inline]
     fn coarse_bounds(&self) -> Rect {
-        coarse_bounds(self.points)
+        coarse_bounds(*self)
     }
 
     #[inline]
     fn split(&self, t: f32) -> (Self::Owning, Self::Owning) {
-        let (left, right) = split(self.points, t);
-        (
-            Self::Owning { points: left },
-            Self::Owning { points: right },
-        )
+        split(*self, t)
     }
 
     #[inline]
     fn split2(&self, t1: f32, t2: f32) -> (Self::Owning, Self::Owning, Self::Owning) {
-        let (left, center, right) = split2(self.points, t1, t2);
-        (
-            Self::Owning { points: left },
-            Self::Owning { points: center },
-            Self::Owning { points: right },
-        )
+        split2(*self, t1, t2)
     }
 
     #[inline]
     fn find_intersections(&self, other: &Self) -> ArrayVec<(f32, f32), 9> {
-        intersection::find(self.points, other.points)
+        intersection::find(*self, *other)
     }
 }
 
-fn evaluate(bezier: &[Point; 4], t: f32) -> Point {
+fn evaluate(curve: CubicSlice, t: f32) -> Point {
     let t = Mat1x4::new(1.0, t, t.powf(2.0), t.powf(3.0));
     #[rustfmt::skip]
     let m = Mat4x4::new(
@@ -151,52 +188,73 @@ fn evaluate(bezier: &[Point; 4], t: f32) -> Point {
         -1.0, 3.0, -3.0, 1.0,
     );
 
-    #[rustfmt::skip]
-    let p = Mat4x2::new(
-        bezier[0].x, bezier[0].y,
-        bezier[1].x, bezier[1].y,
-        bezier[2].x, bezier[2].y,
-        bezier[3].x, bezier[3].y,
-    );
+    let p = Mat4x2::from_columns(Float4::from_array(curve.x), Float4::from_array(curve.y));
 
     let tmp = t * m * p;
     Point::new(tmp.x(), tmp.y())
 }
 
-fn coarse_bounds(bezier: &[Point; 4]) -> Rect {
-    let a = Float4::new(bezier[0].x, bezier[0].y, bezier[1].x, bezier[1].y);
-    let b = Float4::new(bezier[2].x, bezier[2].y, bezier[3].x, bezier[3].y);
-
-    let min1 = a.min(b);
-    let min2 = min1.swap_high_low();
-    let min3 = min1.min(min2);
-
-    let max1 = a.max(b);
-    let max2 = max1.swap_high_low();
-    let max3 = max1.max(max2);
-
-    Rect::new(min3.a(), max3.a(), min3.b(), max3.b())
+fn coarse_bounds(curve: CubicSlice) -> Rect {
+    let (min, max) = Float4::horizontal_min_max4(
+        curve.x.into(),
+        curve.y.into(),
+        Float4::splat(0.0),
+        Float4::splat(0.0),
+    );
+    Rect::new(min.a(), max.a(), min.b(), max.b())
 }
 
-fn split(bezier: &[Point; 4], t: f32) -> ([Point; 4], [Point; 4]) {
-    let mid_01 = bezier[0].lerp(t, &bezier[1]);
-    let mid_12 = bezier[1].lerp(t, &bezier[2]);
-    let mid_23 = bezier[2].lerp(t, &bezier[3]);
+fn split(curve: CubicSlice, t: f32) -> (Cubic, Cubic) {
+    let mid_01_and_12 = {
+        let a = Float4::new(curve.x[0], curve.y[0], curve.x[1], curve.y[1]);
+        let b = Float4::new(curve.x[1], curve.y[1], curve.x[2], curve.y[2]);
+        a.lerp(t, &b)
+    };
+    let mid_23_and_zero = {
+        let a = Float4::new(curve.x[2], curve.y[2], 0.0, 0.0);
+        let b = Float4::new(curve.x[3], curve.y[3], 0.0, 0.0);
+        a.lerp(t, &b)
+    };
+    // let mid_01 = bezier[0].lerp(t, &bezier[1]);
+    // let mid_12 = bezier[1].lerp(t, &bezier[2]);
+    // let mid_23 = bezier[2].lerp(t, &bezier[3]);
 
-    let mid_01_12 = mid_01.lerp(t, &mid_12);
-    let mid_12_23 = mid_12.lerp(t, &mid_23);
+    let mid_12_23 = mid_01_and_12.combine_high_low(mid_23_and_zero);
+    let mid_01_12_and_12_23 = mid_01_and_12.lerp(t, &mid_12_23);
+    // let mid_01_12 = mid_01.lerp(t, &mid_12);
+    // let mid_12_23 = mid_12.lerp(t, &mid_23);
 
-    let midpoint = mid_01_12.lerp(t, &mid_12_23);
+    let midpoint_low = mid_01_12_and_12_23.lerp(t, &mid_01_12_and_12_23.swap_high_low());
+    // let midpoint = mid_01_12.lerp(t, &mid_12_23);
 
-    let a = [bezier[0], mid_01, mid_01_12, midpoint];
-    let b = [midpoint, mid_12_23, mid_23, bezier[3]];
+    let (mid_01_x, mid_01_y, ..) = mid_01_and_12.unpack();
+    let (midpoint_x, midpoint_y, ..) = midpoint_low.unpack();
+    let (mid_01_12_x, mid_01_12_y, mid_12_23_x, mid_12_23_y) = mid_01_12_and_12_23.unpack();
+    let (mid_23_x, mid_23_y, ..) = mid_23_and_zero.unpack();
 
-    (a, b)
+    // let a = [bezier[0], mid_01, mid_01_12, midpoint];
+    // let b = [midpoint, mid_12_23, mid_23, bezier[3]];
+
+    // (a, b)
+    (
+        Cubic {
+            x: [curve.x[0], mid_01_x, mid_01_12_x, midpoint_x],
+            y: [curve.y[0], mid_01_y, mid_01_12_y, midpoint_y],
+        },
+        Cubic {
+            x: [midpoint_x, mid_12_23_x, mid_23_x, curve.x[3]],
+            y: [midpoint_y, mid_12_23_y, mid_23_y, curve.y[3]],
+        },
+    )
 }
 
-fn split2(bezier: &[Point; 4], t1: f32, t2: f32) -> ([Point; 4], [Point; 4], [Point; 4]) {
-    let (left, rest) = split(bezier, t1);
-    let (mid, right) = split(&rest, (t2 - t1) / (1.0 - t1));
+fn split2(
+    curve: CubicSlice,
+    t1: f32,
+    t2: f32,
+) -> (Cubic, Cubic, Cubic) {
+    let (left, rest) = split(curve, t1);
+    let (mid, right) = split(rest.borrow(), (t2 - t1) / (1.0 - t1));
     (left, mid, right)
 }
 
@@ -209,12 +267,8 @@ mod tests {
     #[test]
     fn evaluate() {
         let bezier = Cubic {
-            points: [
-                Point::new(10.0, 5.0),
-                Point::new(3.0, 11.0),
-                Point::new(12.0, 20.0),
-                Point::new(6.0, 15.0),
-            ],
+            x: [10.0, 3.0, 12.0, 6.0],
+            y: [5.0, 11.0, 20.0, 15.0],
         };
 
         assert!(bezier.at(0.0).approx_eq(&Point::new(10.0, 5.0)));
@@ -225,28 +279,19 @@ mod tests {
     #[test]
     fn coarse_bounds() {
         let bezier = Cubic {
-            points: [
-                Point::new(10.0, 5.0),
-                Point::new(3.0, 11.0),
-                Point::new(12.0, 20.0),
-                Point::new(6.0, 15.0),
-            ],
+            x: [10.0, 3.0, 12.0, 6.0],
+            y: [5.0, 11.0, 20.0, 15.0],
         };
 
         let bounds = bezier.coarse_bounds();
-
         assert_eq!(bounds, Rect::new(3.0, 12.0, 5.0, 20.0));
     }
 
     #[test]
     fn split() {
         let bezier = Cubic {
-            points: [
-                Point::new(10.0, 5.0),
-                Point::new(3.0, 11.0),
-                Point::new(12.0, 20.0),
-                Point::new(6.0, 15.0),
-            ],
+            x: [10.0, 3.0, 12.0, 6.0],
+            y: [5.0, 11.0, 20.0, 15.0],
         };
 
         let (left, right) = bezier.split(0.5);

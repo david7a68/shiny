@@ -13,13 +13,9 @@ use shiny::{
 use common::write_png;
 
 fn main() {
-    let points = [
-        Point::new(50.0, 10.0),
-        Point::new(190.0, 190.0),
-        Point::new(10.0, 190.0),
-        Point::new(150.0, 10.0),
-    ];
-    let curve = CubicSlice::new(&points);
+    let x = [50.0, 190.0, 10.0, 150.0,];
+    let y = [10.0, 190.0, 190.0, 10.0,];
+    let curve = CubicSlice::new(&x, &y);
 
     let mut image = PixelBuffer::new(200, 200, PixelFormat::Rgba8, ColorSpace::Srgb).unwrap();
     image.clear(Color::auto(0.0, 0.0, 0.0, 1.0));

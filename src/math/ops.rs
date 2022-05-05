@@ -3,6 +3,8 @@
 pub trait Interpolate {
     /// Implements linear interpolation.
     ///
+    /// Formula: `(1.0 - t) * self + (t * self)`
+    /// 
     /// ```rust
     /// # use shiny::math::ops::Interpolate;
     /// let a = 1.0;

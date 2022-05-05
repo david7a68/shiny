@@ -65,6 +65,12 @@ impl Mat4x2 {
             c1: Float4::new(v12, v22, v32, v42)
         }
     }
+
+    #[inline]
+    #[must_use]
+    pub fn from_columns(c0: Float4, c1: Float4) -> Self {
+        Self { c0, c1 }
+    }
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]

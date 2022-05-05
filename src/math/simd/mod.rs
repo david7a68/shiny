@@ -5,7 +5,7 @@ use std::{
     ops::{Add, Div, Mul, Neg, Sub},
 };
 
-use super::cmp::{ApproxEq, F32_APPROX_EQUAL_THRESHOLD};
+use super::{cmp::{ApproxEq, F32_APPROX_EQUAL_THRESHOLD}, ops::Interpolate};
 
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 #[path = "x86.rs"]
@@ -26,8 +26,8 @@ impl Float4 {
     /// Loads a 4-element array into a vector.
     #[inline]
     #[must_use]
-    pub fn from_array(arr: [f32; 4]) -> Self {
-        Self(arch::pack_array(&arr))
+    pub fn from_array(arr: &[f32; 4]) -> Self {
+        Self(arch::pack_array(arr))
     }
 
     /// Repeats the value `v` in every element of the vector.
@@ -48,6 +48,25 @@ impl Float4 {
     #[must_use]
     pub fn horizontal_sum4(a: Self, b: Self, c: Self, d: Self) -> Self {
         Self(arch::horizontal_sum4(a.0, b.0, c.0, d.0))
+    }
+
+    #[inline]
+    #[must_use]
+    pub fn horizontal_min4(a: Self, b: Self, c: Self, d: Self) -> Self {
+        Self(arch::horizontal_min4(a.0, b.0, c.0, d.0))
+    }
+
+    #[inline]
+    #[must_use]
+    pub fn horizontal_max4(a: Self, b: Self, c: Self, d: Self) -> Self {
+        Self(arch::horizontal_max4(a.0, b.0, c.0, d.0))
+    }
+
+    #[inline]
+    #[must_use]
+    pub fn horizontal_min_max4(a: Self, b: Self, c: Self, d: Self) -> (Self, Self) {
+        let (min, max) = arch::horizontal_min_max4(a.0, b.0, c.0, d.0);
+        (Self(min), Self(max))
     }
 
     /// Transposes a 4x4 matrix.
@@ -168,6 +187,21 @@ impl Float4 {
     #[must_use]
     pub fn swap_high_low(&self) -> Self {
         Self(arch::swap_high_low(self.0))
+    }
+
+    /// Combines two vectors by placing the high half of `self` in the low half
+    /// of the result, and the low half of `rhs` in the high half of the result.
+    /// 
+    /// ```rust
+    /// # use shiny::math::simd::Float4;
+    /// let v1 = Float4::new(1.0, 2.0, 3.0, 4.0);
+    /// let v2 = Float4::new(5.0, 6.0, 7.0, 8.0);
+    /// assert_eq!(v1.combine_high_low(v2).unpack(), (3.0, 4.0, 5.0, 6.0));
+    /// ```
+    #[inline]
+    #[must_use]
+    pub fn combine_high_low(&self, rhs: Self) -> Self {
+        Self(arch::combine_high_low(self.0, rhs.0))
     }
 
     /// Computes the dot product of the vector with another.
@@ -352,6 +386,12 @@ impl ApproxEq for Float4 {
     }
 }
 
+impl Interpolate for Float4 {
+    fn lerp(&self, t: f32, rhs: &Self) -> Self {
+        ((1.0 - t) * *self) + (t * *rhs)
+    }
+}
+
 impl Debug for Float4 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let (a, b, c, d) = self.unpack();
@@ -361,6 +401,18 @@ impl Debug for Float4 {
             .field(&c)
             .field(&d)
             .finish()
+    }
+}
+
+impl From<[f32; 4]> for Float4 {
+    fn from(arr: [f32; 4]) -> Self {
+        Self(arch::pack_array(&arr))
+    }
+}
+
+impl From<&[f32; 4]> for Float4 {
+    fn from(arr: &[f32; 4]) -> Self {
+        Self(arch::pack_array(arr))
     }
 }
 
