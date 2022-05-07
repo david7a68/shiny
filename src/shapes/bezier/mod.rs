@@ -37,8 +37,15 @@ pub trait Bezier: Sized {
     #[must_use]
     fn split2(&self, t1: f32, t3: f32) -> (Self::Owning, Self::Owning, Self::Owning);
 
+    fn splitn<'b, 'c>(
+        &self,
+        t: &[f32],
+        buffer_x: &'b mut Vec<f32>,
+        buffer_y: &'c mut Vec<f32>,
+    );
+
     #[must_use]
-    fn find_intersections(&self, other: &Self) -> ArrayVec<(f32, f32), 9>;
+    fn find_intersections(&self, other: &Self) -> (ArrayVec<f32, 9>, ArrayVec<f32, 9>);
 }
 
 /// A cubic bezier curve.
@@ -58,7 +65,7 @@ impl Cubic {
     }
 
     #[must_use]
-    pub fn borrow(&self) -> CubicSlice {
+    pub fn as_slice(&self) -> CubicSlice {
         CubicSlice::new(&self.x, &self.y)
     }
 }
@@ -68,7 +75,7 @@ impl Bezier for Cubic {
 
     #[inline]
     fn at(&self, t: f32) -> Point {
-        evaluate(self.borrow(), t)
+        evaluate(self.as_slice(), t)
     }
 
     #[inline]
@@ -93,22 +100,32 @@ impl Bezier for Cubic {
 
     #[inline]
     fn coarse_bounds(&self) -> Rect {
-        coarse_bounds(self.borrow())
+        coarse_bounds(self.as_slice())
     }
 
     #[inline]
     fn split(&self, t: f32) -> (Self::Owning, Self::Owning) {
-        split(self.borrow(), t)
+        split(self.as_slice(), t)
     }
 
     #[inline]
     fn split2(&self, t1: f32, t2: f32) -> (Self::Owning, Self::Owning, Self::Owning) {
-        split2(self.borrow(), t1, t2)
+        split2(self.as_slice(), t1, t2)
     }
 
     #[inline]
-    fn find_intersections(&self, other: &Self) -> ArrayVec<(f32, f32), 9> {
-        intersection::find(self.borrow(), other.borrow())
+    fn splitn<'b, 'c>(
+        &self,
+        t: &[f32],
+        buffer_x: &'b mut Vec<f32>,
+        buffer_y: &'c mut Vec<f32>,
+    ) {
+        splitn(self.as_slice(), t, buffer_x, buffer_y)
+    }
+
+    #[inline]
+    fn find_intersections(&self, other: &Self) -> (ArrayVec<f32, 9>, ArrayVec<f32, 9>) {
+        intersection::find(self.as_slice(), other.as_slice())
     }
 }
 
@@ -126,6 +143,14 @@ impl<'a> CubicSlice<'a> {
     #[must_use]
     pub fn new(x: &'a [f32; 4], y: &'a [f32; 4]) -> Self {
         Self { x, y }
+    }
+
+    #[must_use]
+    pub fn as_owned(&self) -> Cubic {
+        Cubic {
+            x: self.x.to_owned(),
+            y: self.y.to_owned(),
+        }
     }
 }
 
@@ -173,7 +198,17 @@ impl<'a> Bezier for CubicSlice<'a> {
     }
 
     #[inline]
-    fn find_intersections(&self, other: &Self) -> ArrayVec<(f32, f32), 9> {
+    fn splitn<'b, 'c>(
+        &self,
+        t: &[f32],
+        buffer_x: &'b mut Vec<f32>,
+        buffer_y: &'c mut Vec<f32>,
+    ) {
+        splitn(*self, t, buffer_x, buffer_y)
+    }
+
+    #[inline]
+    fn find_intersections(&self, other: &Self) -> (ArrayVec<f32, 9>, ArrayVec<f32, 9>) {
         intersection::find(*self, *other)
     }
 }
@@ -248,14 +283,40 @@ fn split(curve: CubicSlice, t: f32) -> (Cubic, Cubic) {
     )
 }
 
-fn split2(
-    curve: CubicSlice,
-    t1: f32,
-    t2: f32,
-) -> (Cubic, Cubic, Cubic) {
+fn split2(curve: CubicSlice, t1: f32, t2: f32) -> (Cubic, Cubic, Cubic) {
     let (left, rest) = split(curve, t1);
-    let (mid, right) = split(rest.borrow(), (t2 - t1) / (1.0 - t1));
+    let (mid, right) = split(rest.as_slice(), (t2 - t1) / (1.0 - t1));
     (left, mid, right)
+}
+
+fn splitn<'a, 'b>(
+    curve: CubicSlice,
+    t: &[f32],
+    buffer_x: &'a mut Vec<f32>,
+    buffer_y: &'b mut Vec<f32>,
+) {
+    if !t.is_empty() {
+        let start_x = buffer_x.len();
+        let start_y = buffer_y.len();
+
+        let mut prev_t = 0.0;
+        let mut remainder = curve.as_owned();
+
+        buffer_x.push(curve.x[0]);
+        buffer_y.push(curve.y[0]);
+
+        for t in t {
+            let (left, rest) = split(remainder.as_slice(), (*t - prev_t) / (1.0 - prev_t));
+            prev_t = *t;
+            remainder = rest;
+
+            buffer_x.extend(&left.x[1..]);
+            buffer_y.extend(&left.y[1..]);
+        }
+
+        buffer_x.extend(&remainder.x[1..]);
+        buffer_y.extend(&remainder.y[1..]);
+    }
 }
 
 #[cfg(test)]
@@ -318,6 +379,50 @@ mod tests {
                 right,
                 original
             );
+        }
+    }
+
+    #[test]
+    fn splitn() {
+        let bezier = Cubic {
+            x: [5.0, 10.0, 15.0, 20.0],
+            y: [5.0, 10.0, 15.0, 20.0],
+        };
+
+        let splits = [0.25, 0.5, 0.75];
+        let mut out_x = vec![];
+        let mut out_y = vec![];
+        bezier.splitn(&splits, &mut out_x, &mut out_y);
+
+        assert_eq!(out_x.len(), 13);
+        assert_eq!(out_y.len(), out_x.len());
+        assert_eq!(&out_x, &out_y);
+
+        let a = CubicSlice {
+            x: out_x[0..=3].try_into().unwrap(),
+            y: out_y[0..=3].try_into().unwrap(),
+        };
+
+        let b = CubicSlice {
+            x: out_x[3..=6].try_into().unwrap(),
+            y: out_y[3..=6].try_into().unwrap(),
+        };
+
+        let c = CubicSlice {
+            x: out_x[6..=9].try_into().unwrap(),
+            y: out_y[6..=9].try_into().unwrap(),
+        };
+
+        let d = CubicSlice {
+            x: out_x[9..=12].try_into().unwrap(),
+            y: out_y[9..=12].try_into().unwrap(),
+        };
+
+        for t in 0 .. 25 {
+            assert!(bezier.at(t as f32 / 100.0).approx_eq(&a.at(t as f32 / 25.0)));
+            assert!(bezier.at(0.25 + (t as f32 / 100.0)).approx_eq(&b.at(t as f32 / 25.0)));
+            assert!(bezier.at(0.50 + (t as f32 / 100.0)).approx_eq(&c.at(t as f32 / 25.0)));
+            assert!(bezier.at(0.75 + (t as f32 / 100.0)).approx_eq(&d.at(t as f32 / 25.0)));
         }
     }
 }

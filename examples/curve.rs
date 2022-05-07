@@ -51,10 +51,10 @@ fn main() {
     }
 
     let bounds = curve.coarse_bounds();
-    image.set(bounds.left() as u32, bounds.top() as u32, Color::BLUE);
-    image.set(bounds.right() as u32, bounds.top() as u32, Color::BLUE);
-    image.set(bounds.right() as u32, bounds.bottom() as u32, Color::BLUE);
-    image.set(bounds.left() as u32, bounds.bottom() as u32, Color::BLUE);
+    image.set(bounds.left as u32, bounds.top as u32, Color::BLUE);
+    image.set(bounds.right as u32, bounds.top as u32, Color::BLUE);
+    image.set(bounds.right as u32, bounds.bottom as u32, Color::BLUE);
+    image.set(bounds.left as u32, bounds.bottom as u32, Color::BLUE);
 
     write_png(image.get_pixels(), module_path!());
 }

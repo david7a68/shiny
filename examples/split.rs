@@ -23,7 +23,7 @@ fn main() {
     let (left, right) = curve.split(0.5);
 
     draw_curve(
-        &left.borrow(),
+        &left.as_slice(),
         0.0,
         1.0,
         Color::auto(1.0, 0.0, 0.0, 1.0),
@@ -31,7 +31,7 @@ fn main() {
     );
 
     draw_curve(
-        &right.borrow(),
+        &right.as_slice(),
         0.0,
         1.0,
         Color::auto(0.0, 1.0, 0.0, 1.0),

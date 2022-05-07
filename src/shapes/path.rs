@@ -1,45 +1,59 @@
-use std::hash::Hash;
-
 use crate::math::cmp::ApproxEq;
 
 use super::{bezier::CubicSlice, point::Point};
 
 pub struct Path {
     pub segments: Vec<Segment>,
-    // TODO: Convert this into two vecs, one for x, and one for y. This will
-    // allow us to do some more & better work with SIMD such as faster bounding
-    // box computations and curve evalution (if CubicBezier & CubicSlice are
-    // switched too).
-    pub x: Vec<f32>,
-    pub y: Vec<f32>,
 }
 
 impl Path {
     pub fn iter(&self) -> SegmentIter {
         SegmentIter {
             path: self,
-            index: 0,
+            segment_index: 0,
         }
     }
 }
 
-#[derive(Clone, Copy, Hash)]
+#[derive(Clone, Default)]
 pub struct Segment {
-    pub start: u32,
-    pub end: u32,
+    pub x: Vec<f32>,
+    pub y: Vec<f32>,
+}
+
+impl Segment {
+    pub fn first(&self) -> Option<Point> {
+        if self.x.is_empty() {
+            None
+        } else {
+            // TODO: index_unchecked?
+            Some(Point::new(self.x[0], self.y[0]))
+        }
+    }
+
+    pub fn last(&self) -> Option<Point> {
+        if self.x.is_empty() {
+            None
+        } else {
+            Some(Point::new(
+                self.x[self.x.len() - 1],
+                self.y[self.y.len() - 1],
+            ))
+        }
+    }
 }
 
 pub struct SegmentIter<'a> {
     path: &'a Path,
-    index: u32,
+    segment_index: u32,
 }
 
 impl<'a> SegmentIter<'a> {
     pub fn iter(&self) -> CurveIter {
-        let segment = self.path.segments[self.index as usize];
+        let segment = &self.path.segments[self.segment_index as usize];
         CurveIter {
-            x: &self.path.x[segment.start as usize..segment.end as usize],
-            y: &self.path.y[segment.start as usize..segment.end as usize],
+            x: &segment.x,
+            y: &segment.y,
             index: 0,
         }
     }
@@ -49,13 +63,10 @@ impl<'a> Iterator for SegmentIter<'a> {
     type Item = CurveIter<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.index < self.path.segments.len() as u32 {
-            let segment = &self.path.segments[self.index as usize];
-            self.index += 1;
-            Some(CurveIter::over_points(
-                &self.path.x[segment.start as usize..(segment.end as usize)],
-                &self.path.y[segment.start as usize..(segment.end as usize)],
-            ))
+        if self.segment_index < self.path.segments.len() as u32 {
+            let segment = &self.path.segments[self.segment_index as usize];
+            self.segment_index += 1;
+            Some(CurveIter::over_points(&segment.x, &segment.y))
         } else {
             None
         }
@@ -101,92 +112,65 @@ pub enum Error {
 #[derive(Default)]
 pub struct Builder {
     segments: Vec<Segment>,
-    x: Vec<f32>,
-    y: Vec<f32>,
+    current: Option<Segment>,
 }
 
 impl Builder {
     pub fn move_to(&mut self, point: Point) {
-        if let Some(previous) = self.segments.last_mut() {
-            previous.end = self.x.len() as u32;
+        if let Some(current) = self.current.take() {
+            self.segments.push(current);
         }
 
-        self.x.push(point.x);
-        self.y.push(point.y);
-        self.segments.push(Segment {
-            start: self.x.len() as u32 - 1,
-            end: self.x.len() as u32,
+        self.current = Some(Segment {
+            x: vec![point.x],
+            y: vec![point.y],
         });
     }
 
     pub fn line_to(&mut self, point: Point) -> Result<(), Error> {
-        if !self.segments.is_empty() {
-            let points = Self::line_as_cubic(
-                *self.x.last().unwrap(),
-                *self.y.last().unwrap(),
-                point.x,
-                point.y,
-            );
-            self.x.extend(&points[0][1..]);
-            self.y.extend(&points[1][1..]);
-            Ok(())
-        } else {
-            Err(Error::PathNotStarted)
-        }
+        let segment = self.current.as_mut().ok_or(Error::PathNotStarted)?;
+        let points = Self::line_as_cubic(segment.last().unwrap(), point);
+        segment.x.extend(&points[0][1..]);
+        segment.y.extend(&points[1][1..]);
+        Ok(())
     }
 
     pub fn add_cubic(&mut self, p1: Point, p2: Point, p3: Point) -> Result<(), Error> {
-        if !self.segments.is_empty() {
-            self.x.extend(&[p1.x, p2.x, p3.x]);
-            self.y.extend(&[p1.y, p2.y, p3.y]);
-            Ok(())
-        } else {
-            Err(Error::PathNotStarted)
-        }
+        let segment = self.current.as_mut().ok_or(Error::PathNotStarted)?;
+        segment.x.extend(&[p1.x, p2.x, p3.x]);
+        segment.y.extend(&[p1.y, p2.y, p3.y]);
+        Ok(())
     }
 
     pub fn close(&mut self) -> Result<(), Error> {
-        if let Some(segment) = self.segments.last_mut() {
-            let first_x = self.x[segment.start as usize];
-            let first_y = self.y[segment.start as usize];
-            let last_x = self.x.last().unwrap();
-            let last_y = self.y.last().unwrap();
-            if !(first_x.approx_eq(last_x) && first_y.approx_eq(last_y)) {
-                let points = Self::line_as_cubic(*last_x, *last_y, first_x, first_y);
-                self.x.extend(&points[0][1..]);
-                self.y.extend(&points[1][1..]);
-            }
-            segment.end = self.x.len() as u32;
-            Ok(())
-        } else {
-            Err(Error::PathNotStarted)
+        let mut segment = self.current.take().ok_or(Error::PathNotStarted)?;
+        let first = segment.first().unwrap();
+        let last = segment.last().unwrap();
+
+        if !first.approx_eq(&last) {
+            let points = Self::line_as_cubic(last, first);
+            segment.x.extend(&points[0][1..]);
+            segment.y.extend(&points[1][1..]);
         }
+
+        self.segments.push(segment);
+        Ok(())
     }
 
     pub fn cursor(&self) -> Option<Point> {
-        self.x
-            .last()
-            .zip(self.y.last())
-            .map(|(x, y)| Point::new(*x, *y))
+        self.current.as_ref().map(|s| s.last().unwrap())
     }
 
     pub fn build(self) -> Result<Path, Error> {
         Ok(Path {
             segments: self.segments,
-            x: self.x,
-            y: self.y,
         })
     }
 
-    fn line_as_cubic(x0: f32, y0: f32, x3: f32, y3: f32) -> [[f32; 4]; 2] {
-        let dx = x3 - x0;
-        let dy = y3 - y0;
-
-        let x1 = x0 + dx * 0.25;
-        let y1 = y0 + dy * 0.25;
-        let x2 = x0 + dx * 0.75;
-        let y2 = y0 + dy * 0.75;
-
-        [[x0, x1, x2, x3], [y0, y1, y2, y3]]
+    fn line_as_cubic(p0: Point, p3: Point) -> [[f32; 4]; 2] {
+        let d = p3 - p0;
+        let p1 = p0 + d * 0.25;
+        let p2 = p3 + d * 0.75;
+        [[p0.x, p1.x, p2.x, p3.x], [p0.y, p1.y, p2.y, p3.y]]
     }
 }

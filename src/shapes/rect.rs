@@ -11,15 +11,24 @@ use crate::math::{
 
 use super::point::Point;
 
-#[derive(Clone, Copy)]
-#[repr(transparent)]
-pub struct Rect(Float4);
+#[derive(Clone, Copy, PartialEq)]
+pub struct Rect {
+    pub left: f32,
+    pub right: f32,
+    pub top: f32,
+    pub bottom: f32,
+}
 
 impl Rect {
     #[inline]
     #[must_use]
     pub fn new(left: f32, right: f32, top: f32, bottom: f32) -> Self {
-        Self(Float4::new(left, right, top, bottom))
+        Self {
+            left,
+            right,
+            top,
+            bottom,
+        }
     }
 
     /// Finds the smallest rectangle that contains all the points in the given
@@ -42,57 +51,37 @@ impl Rect {
     }
 
     #[must_use]
-    pub fn left(&self) -> f32 {
-        self.0.a()
-    }
-
-    #[must_use]
-    pub fn right(&self) -> f32 {
-        self.0.b()
-    }
-
-    #[must_use]
-    pub fn top(&self) -> f32 {
-        self.0.c()
-    }
-
-    #[must_use]
-    pub fn bottom(&self) -> f32 {
-        self.0.d()
-    }
-
-    #[must_use]
     pub fn extent(&self) -> Vec2 {
-        Vec2::new(self.right() - self.left(), self.top() - self.bottom())
+        Vec2::new(self.right - self.left, self.top - self.bottom)
     }
 
     #[must_use]
     pub fn origin(&self) -> Point {
-        Point::new(self.left(), self.bottom())
+        Point::new(self.left, self.bottom)
     }
 
     #[must_use]
     pub fn width(&self) -> f32 {
-        self.right() - self.left()
+        self.right - self.left
     }
 
     #[must_use]
     pub fn height(&self) -> f32 {
-        self.top() - self.bottom()
+        self.top - self.bottom
     }
 
     #[must_use]
     pub fn centroid(&self) -> Point {
         Point::new(
-            (self.left() + self.right()) / 2.0,
-            (self.top() + self.bottom()) / 2.0,
+            (self.left + self.right) / 2.0,
+            (self.top + self.bottom) / 2.0,
         )
     }
 
     #[must_use]
     pub fn intersects_with(&self, rhs: &Rect) -> bool {
-        let a = Float4::new(self.left(), self.top(), rhs.left(), rhs.top());
-        let b = Float4::new(rhs.right(), rhs.bottom(), self.right(), self.bottom());
+        let a = Float4::new(self.left, self.top, rhs.left, rhs.top);
+        let b = Float4::new(rhs.right, rhs.bottom, self.right, self.bottom);
         a.less_or_equal(b) == (true, true, true, true)
     }
 }
@@ -104,22 +93,16 @@ impl Default for Rect {
     }
 }
 
-impl PartialEq for Rect {
-    fn eq(&self, other: &Self) -> bool {
-        self.0 == other.0
-    }
-}
-
 impl Add for Rect {
     type Output = Self;
 
     fn add(self, rhs: Self) -> Self::Output {
-        Self(Float4::new(
-            min!(self.left(), rhs.left()),
-            max!(self.right(), rhs.right()),
-            min!(self.top(), rhs.top()),
-            max!(self.bottom(), rhs.bottom()),
-        ))
+        Self {
+            left: min!(self.left, rhs.left),
+            right: max!(self.right, rhs.right),
+            top: min!(self.top, rhs.top),
+            bottom: max!(self.bottom, rhs.bottom),
+        }
     }
 }
 
@@ -132,10 +115,10 @@ impl AddAssign for Rect {
 impl Debug for Rect {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Rect")
-            .field("left", &self.left())
-            .field("right", &self.right())
-            .field("top", &self.top())
-            .field("bottom", &self.bottom())
+            .field("left", &self.left)
+            .field("right", &self.right)
+            .field("top", &self.top)
+            .field("bottom", &self.bottom)
             .finish()
     }
 }
@@ -147,10 +130,10 @@ mod tests {
     #[test]
     fn position() {
         let r = Rect::new(1.0, 2.0, 3.0, 4.0);
-        assert_eq!(r.left(), 1.0);
-        assert_eq!(r.right(), 2.0);
-        assert_eq!(r.top(), 3.0);
-        assert_eq!(r.bottom(), 4.0);
+        assert_eq!(r.left, 1.0);
+        assert_eq!(r.right, 2.0);
+        assert_eq!(r.top, 3.0);
+        assert_eq!(r.bottom, 4.0);
     }
 
     #[test]

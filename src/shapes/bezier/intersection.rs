@@ -11,14 +11,16 @@ use crate::{
 /// Calculates the t-value for every intersection between the two curves `a` and
 /// `b`.
 #[must_use]
-pub fn find(a: CubicSlice, b: CubicSlice) -> ArrayVec<(f32, f32), 9> {
-    let mut intersections = ArrayVec::new();
+pub fn find(a: CubicSlice, b: CubicSlice) -> (ArrayVec<f32, 9>, ArrayVec<f32, 9>) {
+    let mut intersections_left = ArrayVec::new();
+    let mut intersections_right = ArrayVec::new();
     find_intersections_in_range(
         CurvePart::new(a, 0.0, 1.0),
         CurvePart::new(b, 0.0, 1.0),
-        &mut intersections,
+        &mut intersections_left,
+        &mut intersections_right,
     );
-    intersections
+    (intersections_left, intersections_right)
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -67,12 +69,13 @@ impl<'a> CurvePart<'a> {
 fn find_intersections_in_range(
     mut a: CurvePart,
     mut b: CurvePart,
-    intersections: &mut ArrayVec<(f32, f32), 9>,
+    intersections_left: &mut ArrayVec<f32, 9>,
+    intersections_right: &mut ArrayVec<f32, 9>,
 ) {
     fn calc(curve: &mut CurvePart, against: &CurvePart) -> f32 {
         let initial_length = curve.length();
 
-        let (start, end) = clip(curve.get().borrow(), against.get().borrow());
+        let (start, end) = clip(curve.get().as_slice(), against.get().as_slice());
         (curve.start, curve.end) = (curve.map_to_original(start), curve.map_to_original(end));
 
         curve.length() / initial_length
@@ -91,11 +94,13 @@ fn find_intersections_in_range(
         );
 
         assert!(
-            !intersections.is_full(),
+            !intersections_left.is_full(),
             "Hit max intersections, degenerate case? a:{:?}, b:{:?}",
             a,
             b
         );
+
+        debug_assert_eq!(intersections_left.len(), intersections_right.len());
 
         // Alternate between a and b
         let proportion_remaining = if (num_iterations & 1) == 0 {
@@ -117,12 +122,16 @@ fn find_intersections_in_range(
             // intersection to register. Ideally, there should be some way to
             // avoid doing this (maybe by looking ahead?), but this works for
             // now.
-            if let Some((a_prev, _)) = intersections.last() {
+            if let Some(a_prev) = intersections_left.last() {
+                // We only need to know a_prev, since b_prev wouldn't have
+                // changed unless a_prev did too.
                 if !a_prev.approx_eq(&a.start) {
-                    intersections.push((a.start, b.start));
+                    intersections_left.push(a.start);
+                    intersections_right.push(b.start);
                 }
             } else {
-                intersections.push((a.start, b.start));
+                intersections_left.push(a.start);
+                intersections_right.push(b.start);
             }
             break;
         } else if proportion_remaining > 0.8 {
@@ -131,12 +140,12 @@ fn find_intersections_in_range(
             // intersections in each half.
             if a.length() > b.length() {
                 let (left, right) = a.split(0.5);
-                find_intersections_in_range(left, b, intersections);
-                find_intersections_in_range(right, b, intersections);
+                find_intersections_in_range(left, b, intersections_left, intersections_right);
+                find_intersections_in_range(right, b, intersections_left, intersections_right);
             } else {
                 let (left, right) = b.split(0.5);
-                find_intersections_in_range(a, left, intersections);
-                find_intersections_in_range(a, right, intersections);
+                find_intersections_in_range(a, left, intersections_left, intersections_right);
+                find_intersections_in_range(a, right, intersections_left, intersections_right);
             }
             break;
         }
@@ -353,10 +362,10 @@ mod test {
         ];
 
         for pair in pairs.iter() {
-            let intersections = find(pair.curve1.borrow(), pair.curve2.borrow());
-            assert_eq!(intersections.len(), pair.num_intersections);
+            let (a, b) = find(pair.curve1.as_slice(), pair.curve2.as_slice());
+            assert_eq!(a.len(), pair.num_intersections);
 
-            for (a, b) in intersections.iter() {
+            for (a, b) in a.iter().zip(b.iter()) {
                 let point1 = pair.curve1.at(*a);
                 let point2 = pair.curve2.at(*b);
                 assert!(point1.approx_eq_within(&point2, 0.001));
@@ -375,7 +384,7 @@ mod test {
             y: [122.0, 178.0, 173.0, 242.0],
         };
 
-        let curve1_limits = super::clip(curve1.borrow(), curve2.borrow());
+        let curve1_limits = super::clip(curve1.as_slice(), curve2.as_slice());
         assert_eq!(curve1_limits, (0.18543269, 0.91614604));
     }
 }
