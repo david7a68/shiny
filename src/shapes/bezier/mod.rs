@@ -123,7 +123,7 @@ impl Bezier for Cubic {
 /// composites of several curves, where the first and last point can be shared
 /// with the curves before and after, respectively. This can significantly
 /// reduce the number of points that need to be stored.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct CubicSlice<'a> {
     pub x: &'a [f32; 4],
     pub y: &'a [f32; 4],

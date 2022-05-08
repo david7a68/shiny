@@ -95,9 +95,10 @@ fn find_intersections_in_range(
 
         assert!(
             !intersections_left.is_full(),
-            "Hit max intersections, degenerate case? a:{:?}, b:{:?}",
+            "Hit max intersections, degenerate case? a: {:?}, b: {:?}, intersections (a): {:?}",
             a,
-            b
+            b,
+            intersections_left
         );
 
         debug_assert_eq!(intersections_left.len(), intersections_right.len());

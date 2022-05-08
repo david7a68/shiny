@@ -17,74 +17,152 @@
 //! 5. Self-intersection cutting: TBD
 //! 6. Extension correction: TBD
 
-use crate::shapes::{bezier::Bezier, path::Path};
-
-use self::change_list::ChangeList;
+use crate::{
+    math::cmp::{max, min},
+    shapes::{bezier::Bezier, path::Path, rect::Rect},
+};
 
 mod change_list;
 mod curve_bvh;
 
-pub fn flatten<'a, 'b>(
-    path: &'a mut Path,
+pub use change_list::ChangeList;
+pub use curve_bvh::CurveBvh;
+
+pub fn normalize(path: &mut Path) -> Rect {
+    let rect = {
+        let mut min_x = path.x[0];
+        let mut min_y = path.y[0];
+        let mut max_x = path.x[0];
+        let mut max_y = path.y[0];
+
+        for x in &path.x[1..] {
+            min_x = min!(min_x, *x);
+            max_x = max!(max_x, *x);
+        }
+
+        for y in &path.y[1..] {
+            min_y = min!(min_y, *y);
+            max_y = max!(max_y, *y);
+        }
+
+        Rect::new(min_x, max_x, min_y, max_y)
+    };
+
+    let offset_x = rect.left;
+    let offset_y = rect.top;
+    let div_x = rect.width();
+    let div_y = rect.height();
+
+    for x in &mut path.x {
+        *x = (*x - offset_x) / div_x;
+    }
+
+    for y in &mut path.y {
+        *y = (*y - offset_y) / div_y;
+    }
+
+    rect
+}
+
+pub fn flatten<'a>(
+    path: &mut Path,
     change_buffer: &mut change_list::ChangeList,
-    bvh_builder: &'b mut curve_bvh::Builder,
-) -> curve_bvh::CurveBvh<'b>
-where
-    'b: 'a,
-{
-    // CONCERN (straivers): Normalization may accidentally produce denormalized numbers for
+    bvh_builder: &'a mut curve_bvh::Builder,
+) -> curve_bvh::CurveBvh<'a> {
+    // CONCERN (straivers): Normalization may accidentally produce denormal numbers for
     // very large paths, which have an outsized impact on performance. A
     // possible solution would be to use f64 instead, though it would involve
     // quite a bit of work. Of course, the big issue here is that the longer we
     // wait to make the transition, the harder it will become.
 
+    // normalize?
+
     change_buffer.clear();
-    let mut bvh = bvh_builder.build(path);
     let mut intersection_buffer = Vec::new();
 
-    let mut found_intersection = true;
-    while found_intersection {
-        found_intersection = false;
-        for node in bvh.nodes.iter().filter(|node| node.is_leaf()) {
+    let mut candidates = 0;
+    let mut intersections = 0;
+
+    let mut iteration = 0;
+    loop {
+        let mut found_intersection = false;
+        let bvh = bvh_builder.build(path);
+
+        for (node, node_idx) in bvh.nodes.iter().zip(0..).filter(|node| node.0.is_leaf()) {
+            if iteration > 0 && node.last_touched.get() == iteration {
+                continue;
+            }
+
             let leaf = node.leaf().unwrap();
-            bvh.find_intersecting_with(leaf.bbox, &mut intersection_buffer);
+            bvh.find_intersecting_with(node_idx, &mut intersection_buffer);
 
-            for candidate in intersection_buffer.iter() {
-                let curve = bvh.get(leaf);
-                let candidate_curve = bvh.get(candidate);
-                let (a_intersections, b_intersections) = curve.find_intersections(&candidate_curve);
+            candidates += intersection_buffer.len();
 
-                // PROBLEM: Bezier::find_intersections fails in the case of two
-                // curves with colinear segments, reporting intersections that are
-                // very close together.
-                //
-                // However, we are ignoring that fact for the moment.
+            // println!("node");
 
-                if a_intersections.is_empty() {
-                    // Continue looking for the next intersection.
-                    continue;
+            for (curve, segment_id, first_point) in bvh.curves_in(leaf, path) {
+                // println!("curve");
+
+                for (c_node_id, (c_curve, c_segment_id, c_first_point)) in intersection_buffer
+                    .iter()
+                    .cloned()
+                    .filter(|(c_node_id, _)| {
+                        bvh.nodes[*c_node_id as usize].last_touched.get() != iteration
+                    })
+                    .flat_map(|(i, leaf)| std::iter::repeat(i).zip(bvh.curves_in(leaf, path)))
+                {
+                    println!("\t curve {}, candidate {}", node_idx, c_node_id);
+                    let (node_splits, candidate_splits) = curve.find_intersections(&c_curve);
+
+                    if !node_splits.is_empty() {
+                        intersections += node_splits.len();
+
+                        change_buffer.replace(segment_id, first_point, |x, y| {
+                            curve.splitn(&node_splits, x, y);
+                        });
+
+                        change_buffer.replace(c_segment_id, c_first_point, |x, y| {
+                            c_curve.splitn(&candidate_splits, x, y);
+                        });
+
+                        node.last_touched.replace(iteration);
+                        bvh.nodes[c_node_id as usize]
+                            .last_touched
+                            .replace(iteration);
+
+                        // Skip the rest of the intersection buffer since we've
+                        // already made changes to the bvh that won't be reflected
+                        // until it's been rebuilt.
+                        found_intersection = true;
+                        break;
+                    }
                 }
-
-                change_buffer.replace(leaf.segment_id, leaf.first_point, |x, y| {
-                    curve.splitn(&a_intersections, x, y);
-                });
-                change_buffer.replace(candidate.segment_id, candidate.first_point, |x, y| {
-                    candidate_curve.splitn(&b_intersections, x, y);
-                });
-
-                // Skip the rest of the intersection buffer since we've already
-                // made changes to the bvh that won't be reflected until it's
-                // been rebuilt.
-                found_intersection = true;
-                break;
             }
         }
 
-        change_buffer.apply(path);
-        bvh = bvh_builder.build(path);
+        iteration += 1;
+
+        if found_intersection {
+            change_buffer.apply(path);
+        } else {
+            break;
+        }
     }
 
-    todo!()
+    println!("{} candidates, {} intersections", candidates, intersections);
+
+    // TODO (straivers): This is a hack to get around fixed-lifetime issues.
+    // Ideally, we would return the bvh if !found_intersection, but that's not
+    // possible because it would require the bvh to have a lifetime of 'a,
+    // preventing us from recreating the bvh every iteration (multiple mutable
+    // borrows). A possible option would be to somehow 'rebuild' the bvh without
+    // actually doing any of the work, but I am not sure how to do that safely.
+    //
+    // A token produced by `CurveBvh` that can be used to recover it would be
+    // ideal, 'cept that it is entirely unsafe. Now, if we only use it here, it
+    // should be fine, but I remain uncomfortable with the idea if it can be
+    // avoided.
+    bvh_builder.build(path)
 }
 
 pub fn compute_fill_scores(path: &Path, bvh: curve_bvh::CurveBvh, score_buffer: &mut Vec<u16>) {

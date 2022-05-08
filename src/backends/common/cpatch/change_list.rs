@@ -38,6 +38,8 @@ impl ChangeList {
     }
 
     pub fn apply(&mut self, path: &mut Path) {
+        println!("Applying chages {:?}", &self.changes);
+
         self.changes.sort_by(|a, b| a.position.cmp(&b.position));
 
         #[cfg(debug_assertions)]
@@ -74,6 +76,10 @@ impl ChangeList {
                 TryInto::<u16>::try_into(new_x.len() - 4).unwrap();
             offset += new_x.len() - 4;
         }
+
+        self.changes.clear();
+        self.x.clear();
+        self.y.clear();
     }
 }
 

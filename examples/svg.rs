@@ -25,13 +25,18 @@ fn main() {
         stroke_color: Color::GREEN,
     });
 
-    let file = std::fs::read_to_string("./test_files/tiger.svg").unwrap();
+    // let file = std::fs::read_to_string("./test_files/tiger.svg").unwrap();
     // let file = std::fs::read_to_string("./test_files/car.svg").unwrap();
+    let file = std::fs::read_to_string("./test_files/p1.svg").unwrap();
+
     let paths = read_svg(&file);
-    // for path in &paths {
-    //     canvas.fill_path(path, paint);
-    // }
-    canvas.fill_path(&paths[114], paint);
+    let start_time = std::time::Instant::now();
+    for path in &paths {
+        canvas.fill_path(path, paint);
+    }
+    // canvas.fill_path(&paths[114], paint);
+    // canvas.fill_path(&paths[318], paint);
+    println!("Render time: {:?}", start_time.elapsed());
 
     println!("writing images");
     let image = canvas.get_pixels();
@@ -128,7 +133,9 @@ fn read_svg(data: &str) -> Vec<Path> {
                         y,
                     } => {
                         println!("arc");
-                        break 'path;
+                        path.line_to(Point::new(4.0 * x as f32, 4.0 * y as f32))
+                            .unwrap();
+                        // break 'path;
                     }
                     svgtypes::PathSegment::ClosePath { abs } => {
                         path.close().unwrap();

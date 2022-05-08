@@ -1,6 +1,6 @@
 use std::{
     fmt::Debug,
-    ops::{Add, AddAssign, BitOr, BitAnd},
+    ops::{Add, BitAnd, BitOr, BitOrAssign},
 };
 
 use crate::math::{
@@ -67,7 +67,12 @@ impl Rect {
 
     #[must_use]
     pub fn height(&self) -> f32 {
-        self.top - self.bottom
+        self.bottom - self.top
+    }
+
+    #[must_use]
+    pub fn area(&self) -> f32 {
+        self.width() * self.height()
     }
 
     #[must_use]
@@ -93,19 +98,6 @@ impl Default for Rect {
     }
 }
 
-impl Add for Rect {
-    type Output = Self;
-
-    fn add(self, rhs: Self) -> Self::Output {
-        Self {
-            left: min!(self.left, rhs.left),
-            right: max!(self.right, rhs.right),
-            top: min!(self.top, rhs.top),
-            bottom: max!(self.bottom, rhs.bottom),
-        }
-    }
-}
-
 impl Add<Vec2> for Rect {
     type Output = Self;
 
@@ -119,9 +111,22 @@ impl Add<Vec2> for Rect {
     }
 }
 
-impl AddAssign for Rect {
-    fn add_assign(&mut self, rhs: Self) {
-        *self = *self + rhs;
+impl BitOr for Rect {
+    type Output = Self;
+
+    fn bitor(self, rhs: Self) -> Self::Output {
+        Self {
+            left: min!(self.left, rhs.left),
+            right: max!(self.right, rhs.right),
+            top: min!(self.top, rhs.top),
+            bottom: max!(self.bottom, rhs.bottom),
+        }
+    }
+}
+
+impl BitOrAssign for Rect {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = *self | rhs;
     }
 }
 
@@ -139,7 +144,7 @@ impl BitAnd for Rect {
                 bottom: min!(self.bottom, rhs.bottom),
             }
         }
-    }   
+    }
 }
 
 impl Debug for Rect {

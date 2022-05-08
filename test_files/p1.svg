@@ -1,0 +1,11 @@
+<svg width="1280" height="720" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" overflow="hidden">
+    <defs>
+        <clipPath id="clip0">
+            <rect x="0" y="0" width="1280" height="720" />
+        </clipPath>
+    </defs>
+    <g clip-path="url(#clip0)">
+        <rect x="0" y="0" width="1280" height="720" fill="#FFFFFF" />
+        <path d="M265.964 258.152C297.177 233.938 422.811 146.258 476.654 173.792 530.497 201.326 537.91 407.538 589.022 423.356 640.134 439.173 833.267 286.076 783.326 268.697 733.384 251.317 375.796 321.031 289.374 319.078 202.952 317.125 234.75 282.366 265.964 258.152Z" stroke="#2F528F" stroke-width="1.33333" stroke-miterlimit="8" fill="#4472C4" fill-rule="evenodd" />
+    </g>
+</svg>

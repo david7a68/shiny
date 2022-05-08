@@ -22,6 +22,7 @@ impl Path {
 }
 
 #[derive(Clone, Copy, Hash)]
+#[repr(transparent)]
 pub struct Segment {
     pub length: u16,
 }
@@ -86,6 +87,7 @@ impl<'a> Iterator for CurveIter<'a> {
 #[derive(Clone, Copy, Debug)]
 pub enum Error {
     PathNotStarted,
+    TooManyCurves,
 }
 
 #[derive(Default)]
@@ -94,6 +96,7 @@ pub struct Builder {
     current: Option<Segment>,
     x: Vec<f32>,
     y: Vec<f32>,
+    num_curves: u16,
 }
 
 impl Builder {
@@ -115,15 +118,19 @@ impl Builder {
         self.x.extend(&points[0][1..]);
         self.y.extend(&points[1][1..]);
         current.length += 3;
+        self.num_curves.checked_add(1).ok_or(Error::TooManyCurves)?;
 
         Ok(())
     }
 
     pub fn add_cubic(&mut self, p1: Point, p2: Point, p3: Point) -> Result<(), Error> {
         let mut current = self.current.as_mut().ok_or(Error::PathNotStarted)?;
+
         self.x.extend(&[p1.x, p2.x, p3.x]);
         self.y.extend(&[p1.y, p2.y, p3.y]);
         current.length += 3;
+        self.num_curves.checked_add(1).ok_or(Error::TooManyCurves)?;
+
         Ok(())
     }
 
@@ -140,6 +147,7 @@ impl Builder {
             self.x.extend(&points[0][1..]);
             self.y.extend(&points[1][1..]);
             current.length += 3;
+            self.num_curves.checked_add(1).ok_or(Error::TooManyCurves)?;
         }
 
         self.segments.push(current);
