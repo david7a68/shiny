@@ -136,12 +136,9 @@ fn read_svg(data: &str) -> Vec<Path> {
             }
 
             let p = path.build().unwrap();
-            let longest_segment_length = p.segments.iter().map(|s| s.x.len()).max();
-            if let Some(longest) = longest_segment_length {
-                if longest > longest_path {
-                    longest_path = longest;
-                    longest_path_idx = paths.len();
-                }
+            if p.x.len() > longest_path {
+                longest_path = p.x.len();
+                longest_path_idx = paths.len();
             }
 
             paths.push(p);

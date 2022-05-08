@@ -84,15 +84,17 @@ impl CanvasOps for SoftwareCanvas {
                     }
 
                     let p = curve.at(t) + Vec2::new(100.0, 100.0);
-                    self.pixels.set(
-                        p.x.round() as u32,
-                        p.y.round() as u32,
-                        self.shared_state
-                            .borrow()
-                            .paints
-                            .get(&paint.handle)
-                            .map_or(Color::DEFAULT, |p| p.fill_color),
-                    );
+                    if p.x > 0.0 && p.y > 0.0 {
+                        self.pixels.set(
+                            p.x.round() as u32,
+                            p.y.round() as u32,
+                            self.shared_state
+                                .borrow()
+                                .paints
+                                .get(&paint.handle)
+                                .map_or(Color::DEFAULT, |p| p.fill_color),
+                        );
+                    }
                     t += delta;
                 }
             }
