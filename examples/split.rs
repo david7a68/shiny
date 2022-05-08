@@ -13,8 +13,8 @@ use shiny::{
 use common::write_png;
 
 fn main() {
-    let x = [50.0, 190.0, 10.0, 150.0,];
-    let y = [10.0, 190.0, 190.0, 10.0,];
+    let x = [50.0, 190.0, 10.0, 150.0];
+    let y = [10.0, 190.0, 190.0, 10.0];
     let curve = CubicSlice::new(&x, &y);
 
     let mut image = PixelBuffer::new(200, 200, PixelFormat::Rgba8, ColorSpace::Srgb).unwrap();

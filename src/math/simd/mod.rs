@@ -5,7 +5,10 @@ use std::{
     ops::{Add, Div, Mul, Neg, Sub},
 };
 
-use super::{cmp::{ApproxEq, F32_APPROX_EQUAL_THRESHOLD}, ops::Interpolate};
+use super::{
+    cmp::{ApproxEq, F32_APPROX_EQUAL_THRESHOLD},
+    ops::Interpolate,
+};
 
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 #[path = "x86.rs"]
@@ -191,7 +194,7 @@ impl Float4 {
 
     /// Combines two vectors by placing the high half of `self` in the low half
     /// of the result, and the low half of `rhs` in the high half of the result.
-    /// 
+    ///
     /// ```rust
     /// # use shiny::math::simd::Float4;
     /// let v1 = Float4::new(1.0, 2.0, 3.0, 4.0);

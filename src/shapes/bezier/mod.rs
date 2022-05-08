@@ -37,12 +37,7 @@ pub trait Bezier: Sized {
     #[must_use]
     fn split2(&self, t1: f32, t3: f32) -> (Self::Owning, Self::Owning, Self::Owning);
 
-    fn splitn<'b, 'c>(
-        &self,
-        t: &[f32],
-        buffer_x: &'b mut Vec<f32>,
-        buffer_y: &'c mut Vec<f32>,
-    );
+    fn splitn<'b, 'c>(&self, t: &[f32], buffer_x: &'b mut Vec<f32>, buffer_y: &'c mut Vec<f32>);
 
     #[must_use]
     fn find_intersections(&self, other: &Self) -> (ArrayVec<f32, 9>, ArrayVec<f32, 9>);
@@ -114,12 +109,7 @@ impl Bezier for Cubic {
     }
 
     #[inline]
-    fn splitn<'b, 'c>(
-        &self,
-        t: &[f32],
-        buffer_x: &'b mut Vec<f32>,
-        buffer_y: &'c mut Vec<f32>,
-    ) {
+    fn splitn<'b, 'c>(&self, t: &[f32], buffer_x: &'b mut Vec<f32>, buffer_y: &'c mut Vec<f32>) {
         splitn(self.as_slice(), t, buffer_x, buffer_y)
     }
 
@@ -198,12 +188,7 @@ impl<'a> Bezier for CubicSlice<'a> {
     }
 
     #[inline]
-    fn splitn<'b, 'c>(
-        &self,
-        t: &[f32],
-        buffer_x: &'b mut Vec<f32>,
-        buffer_y: &'c mut Vec<f32>,
-    ) {
+    fn splitn<'b, 'c>(&self, t: &[f32], buffer_x: &'b mut Vec<f32>, buffer_y: &'c mut Vec<f32>) {
         splitn(*self, t, buffer_x, buffer_y)
     }
 
@@ -418,11 +403,19 @@ mod tests {
             y: out_y[9..=12].try_into().unwrap(),
         };
 
-        for t in 0 .. 25 {
-            assert!(bezier.at(t as f32 / 100.0).approx_eq(&a.at(t as f32 / 25.0)));
-            assert!(bezier.at(0.25 + (t as f32 / 100.0)).approx_eq(&b.at(t as f32 / 25.0)));
-            assert!(bezier.at(0.50 + (t as f32 / 100.0)).approx_eq(&c.at(t as f32 / 25.0)));
-            assert!(bezier.at(0.75 + (t as f32 / 100.0)).approx_eq(&d.at(t as f32 / 25.0)));
+        for t in 0..25 {
+            assert!(bezier
+                .at(t as f32 / 100.0)
+                .approx_eq(&a.at(t as f32 / 25.0)));
+            assert!(bezier
+                .at(0.25 + (t as f32 / 100.0))
+                .approx_eq(&b.at(t as f32 / 25.0)));
+            assert!(bezier
+                .at(0.50 + (t as f32 / 100.0))
+                .approx_eq(&c.at(t as f32 / 25.0)));
+            assert!(bezier
+                .at(0.75 + (t as f32 / 100.0))
+                .approx_eq(&d.at(t as f32 / 25.0)));
         }
     }
 }
