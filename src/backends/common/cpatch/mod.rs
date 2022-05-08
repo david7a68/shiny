@@ -38,9 +38,9 @@ where
     // quite a bit of work. Of course, the big issue here is that the longer we
     // wait to make the transition, the harder it will become.
 
+    change_buffer.clear();
     let mut bvh = bvh_builder.build(path);
     let mut intersection_buffer = Vec::new();
-    let mut change_list = ChangeList::default();
 
     let mut found_intersection = true;
     while found_intersection {
@@ -65,10 +65,10 @@ where
                     continue;
                 }
 
-                change_list.replace(leaf.segment_id, leaf.first_point, |x, y| {
+                change_buffer.replace(leaf.segment_id, leaf.first_point, |x, y| {
                     curve.splitn(&a_intersections, x, y);
                 });
-                change_list.replace(candidate.segment_id, candidate.first_point, |x, y| {
+                change_buffer.replace(candidate.segment_id, candidate.first_point, |x, y| {
                     candidate_curve.splitn(&b_intersections, x, y);
                 });
 
@@ -80,7 +80,7 @@ where
             }
         }
 
-        change_list.apply(path);
+        change_buffer.apply(path);
         bvh = bvh_builder.build(path);
     }
 
