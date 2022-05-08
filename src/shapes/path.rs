@@ -4,6 +4,7 @@ use crate::math::cmp::ApproxEq;
 
 use super::{bezier::CubicSlice, point::Point};
 
+#[derive(Clone)]
 pub struct Path {
     pub segments: Vec<Segment>,
     pub x: Vec<f32>,

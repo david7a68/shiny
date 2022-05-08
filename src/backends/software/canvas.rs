@@ -1,6 +1,7 @@
 use std::{cell::RefCell, rc::Rc};
 
 use crate::{
+    backends::common::cpatch::{flatten, ChangeList, CurveBvh},
     canvas::{Canvas, CanvasOps},
     color::{Color, Space as ColorSpace},
     hash::hash_of,
@@ -11,6 +12,7 @@ use crate::{
     shapes::{
         bezier::Bezier,
         path::{Builder as PathBuilder, Path},
+        rect::Rect,
     },
 };
 
@@ -74,6 +76,16 @@ impl CanvasOps for SoftwareCanvas {
     }
 
     fn fill_path(&mut self, path: &Path, paint: Paint) {
+        let mut path = path.clone();
+
+        let prect = Rect::new(0.0,self.width() as f32, 0.0, self.height() as f32);
+
+        if false {
+            let mut change_buffer = ChangeList::default();
+            let mut bvh_builder = CurveBvh::builder();
+            let _ = flatten(&mut path, &mut change_buffer, &mut bvh_builder);
+        }
+
         for segment in path.iter() {
             for curve in segment {
                 let mut t = 0.0;
@@ -83,7 +95,7 @@ impl CanvasOps for SoftwareCanvas {
                         break;
                     }
 
-                    let p = curve.at(t) + Vec2::new(100.0, 100.0);
+                    let p = curve.at(t) + Vec2::new(1000.0, 500.0);
                     if p.x > 0.0 && p.y > 0.0 {
                         self.pixels.set(
                             p.x.round() as u32,
@@ -96,6 +108,21 @@ impl CanvasOps for SoftwareCanvas {
                         );
                     }
                     t += delta;
+                }
+
+                if true {
+                    // draw bounding boxes
+                    let bounds = (curve.coarse_bounds() + Vec2::new(1000.0, 500.0)) & prect;
+                    if bounds.width() > 0.0 {
+                        for x in bounds.left.round() as u32..bounds.right.round() as u32 {
+                            self.pixels.set(x, bounds.top.round() as u32, Color::BRIGHT_PINK);
+                            self.pixels.set(x, bounds.bottom.round() as u32, Color::BRIGHT_PINK);
+                        }
+                        for y in bounds.top.round() as u32..bounds.bottom.round() as u32 {
+                            self.pixels.set(bounds.left.round() as u32, y, Color::BRIGHT_PINK);
+                            self.pixels.set(bounds.right.round() as u32, y, Color::BRIGHT_PINK);
+                        }
+                    }
                 }
             }
         }

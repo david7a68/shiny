@@ -28,9 +28,10 @@ fn main() {
     let file = std::fs::read_to_string("./test_files/tiger.svg").unwrap();
     // let file = std::fs::read_to_string("./test_files/car.svg").unwrap();
     let paths = read_svg(&file);
-    for path in &paths {
-        canvas.fill_path(path, paint);
-    }
+    // for path in &paths {
+    //     canvas.fill_path(path, paint);
+    // }
+    canvas.fill_path(&paths[114], paint);
 
     println!("writing images");
     let image = canvas.get_pixels();

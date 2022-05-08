@@ -1,6 +1,6 @@
 use std::{
     fmt::Debug,
-    ops::{Add, AddAssign},
+    ops::{Add, AddAssign, BitOr, BitAnd},
 };
 
 use crate::math::{
@@ -106,10 +106,40 @@ impl Add for Rect {
     }
 }
 
+impl Add<Vec2> for Rect {
+    type Output = Self;
+
+    fn add(self, rhs: Vec2) -> Self::Output {
+        Self {
+            left: self.left + rhs.x(),
+            right: self.right + rhs.x(),
+            top: self.top + rhs.y(),
+            bottom: self.bottom + rhs.y(),
+        }
+    }
+}
+
 impl AddAssign for Rect {
     fn add_assign(&mut self, rhs: Self) {
         *self = *self + rhs;
     }
+}
+
+impl BitAnd for Rect {
+    type Output = Self;
+
+    fn bitand(self, rhs: Self) -> Self::Output {
+        if !self.intersects_with(&rhs) {
+            Self::default()
+        } else {
+            Self {
+                left: max!(self.left, rhs.left),
+                right: min!(self.right, rhs.right),
+                top: max!(self.top, rhs.top),
+                bottom: min!(self.bottom, rhs.bottom),
+            }
+        }
+    }   
 }
 
 impl Debug for Rect {

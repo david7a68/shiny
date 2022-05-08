@@ -281,9 +281,6 @@ fn splitn<'a, 'b>(
     buffer_y: &'b mut Vec<f32>,
 ) {
     if !t.is_empty() {
-        let start_x = buffer_x.len();
-        let start_y = buffer_y.len();
-
         let mut prev_t = 0.0;
         let mut remainder = curve.as_owned();
 
