@@ -5,7 +5,7 @@
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use crate::{
-    canvas::Canvas,
+    canvas::{Canvas, CanvasOptions},
     color::Space as ColorSpace,
     hash::PassThroughHasher,
     image::{Error as ImageError, PixelFormat},
@@ -35,8 +35,16 @@ impl Software {
         height: u32,
         format: PixelFormat,
         color_space: ColorSpace,
+        options: CanvasOptions,
     ) -> Result<impl Canvas, ImageError> {
-        SoftwareCanvas::new(width, height, format, color_space, self.shared.clone())
+        SoftwareCanvas::new(
+            width,
+            height,
+            format,
+            color_space,
+            options,
+            self.shared.clone(),
+        )
     }
 }
 

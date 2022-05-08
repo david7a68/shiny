@@ -5,6 +5,12 @@ use crate::{
     shapes::path::{Builder as PathBuilder, Path},
 };
 
+pub struct CanvasOptions {
+    /// Set to enable randomization of the color used for every draw command,
+    /// overriding the paint passed to the canvas.
+    pub debug_randomize_color: bool,
+}
+
 /// A 2D drawing context.
 ///
 /// Drawing commands directed to a canvas are rendered out by the backend. All

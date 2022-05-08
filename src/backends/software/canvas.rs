@@ -1,8 +1,9 @@
+use rand::Rng;
 use std::{cell::RefCell, rc::Rc};
 
 use crate::{
     backends::common::cpatch::{flatten, ChangeList, CurveBvh},
-    canvas::{Canvas, CanvasOps},
+    canvas::{Canvas, CanvasOps, CanvasOptions},
     color::{Color, Space as ColorSpace},
     hash::hash_of,
     image::{Error as ImageError, Image, PixelFormat},
@@ -21,6 +22,7 @@ use super::BackendState;
 pub struct SoftwareCanvas {
     shared_state: Rc<RefCell<BackendState>>,
     pixels: PixelBuffer,
+    config: CanvasOptions,
 }
 
 impl SoftwareCanvas {
@@ -29,10 +31,12 @@ impl SoftwareCanvas {
         height: u32,
         format: PixelFormat,
         color_space: ColorSpace,
+        config: CanvasOptions,
         shared_state: Rc<RefCell<BackendState>>,
     ) -> Result<Self, ImageError> {
         Ok(SoftwareCanvas {
             shared_state,
+            config,
             pixels: PixelBuffer::new(width, height, format, color_space)?,
         })
     }
@@ -116,6 +120,18 @@ impl CanvasOps for SoftwareCanvas {
             }
         }
 
+        let mut rng = rand::thread_rng();
+
+        let mut color = if self.config.debug_randomize_color {
+            rng.gen()
+        } else {
+            self.shared_state
+                .borrow()
+                .paints
+                .get(&paint.handle)
+                .map_or(Color::DEFAULT, |p| p.fill_color)
+        };
+
         for segment in path.iter() {
             for curve in segment {
                 let mut t = 0.0;
@@ -126,16 +142,10 @@ impl CanvasOps for SoftwareCanvas {
                     }
 
                     let p = curve.at(t) + Vec2::new(400.0, 100.0);
+
                     if p.x > 0.0 && p.y > 0.0 {
-                        self.pixels.set(
-                            p.x.round() as u32,
-                            p.y.round() as u32,
-                            self.shared_state
-                                .borrow()
-                                .paints
-                                .get(&paint.handle)
-                                .map_or(Color::DEFAULT, |p| p.fill_color),
-                        );
+                        self.pixels
+                            .set(p.x.round() as u32, p.y.round() as u32, color);
                     }
                     t += delta;
                 }
@@ -157,6 +167,14 @@ impl CanvasOps for SoftwareCanvas {
                                 .set(bounds.right.round() as u32, y, Color::BRIGHT_PINK);
                         }
                     }
+                }
+
+                if self.config.debug_randomize_color {
+                    let mut new_color = rng.gen();
+                    while new_color == color {
+                        new_color = rng.gen();
+                    }
+                    color = new_color;
                 }
             }
         }

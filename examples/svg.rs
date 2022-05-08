@@ -3,7 +3,7 @@ use common::*;
 
 use shiny::{
     backends::software::Software,
-    canvas::{Canvas, CanvasOps},
+    canvas::{Canvas, CanvasOps, CanvasOptions},
     color::{Color, Space as ColorSpace},
     image::{Image, PixelFormat},
     paint::PaintConfig,
@@ -16,7 +16,15 @@ use shiny::{
 fn main() {
     let backend = Software::new();
     let mut canvas = backend
-        .new_canvas(4000, 2000, PixelFormat::Rgb10a2, ColorSpace::LinearSrgb)
+        .new_canvas(
+            4000,
+            2000,
+            PixelFormat::Rgb10a2,
+            ColorSpace::LinearSrgb,
+            CanvasOptions {
+                debug_randomize_color: true,
+            },
+        )
         .unwrap();
     canvas.clear(Color::BLACK);
 

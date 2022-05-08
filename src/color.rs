@@ -17,6 +17,8 @@
 
 use std::{hash::Hash, ops::Add};
 
+use rand::{distributions::Standard, prelude::Distribution};
+
 /// A 4-component color specifying red, green, blue, and transparency (alpha).
 /// This type is used when specifying colors for drawing commands, and is
 /// defined relative to the color space of the render target.
@@ -78,7 +80,50 @@ impl Color {
         space: Space::Unknown,
     };
 
+    pub const YELLOW: Self = Self {
+        r: 1.0,
+        g: 165.0 / 255.0,
+        b: 0.0,
+        a: 1.0,
+        space: Space::Unknown,
+    };
+
+    pub const CYAN: Self = Self {
+        r: 0.0,
+        g: 1.0,
+        b: 1.0,
+        a: 1.0,
+        space: Space::Unknown,
+    };
+
+    pub const MAGENTA: Self = Self {
+        r: 1.0,
+        g: 0.0,
+        b: 1.0,
+        a: 1.0,
+        space: Space::Unknown,
+    };
+
+    pub const ORANGE: Self = Self {
+        r: 1.0,
+        g: 165.0 / 255.0,
+        b: 0.0,
+        a: 1.0,
+        space: Space::Unknown,
+    };
+
     pub const DEFAULT: Self = Self::BRIGHT_PINK;
+
+    pub const DEBUG_RANDOM_COLORS: [Self; 8] = [
+        Self::RED,
+        Self::GREEN,
+        Self::BLUE,
+        Self::BRIGHT_PINK,
+        Self::YELLOW,
+        Self::CYAN,
+        Self::MAGENTA,
+        Self::ORANGE,
+    ];
 
     pub fn auto(r: f32, g: f32, b: f32, a: f32) -> Self {
         Color {
@@ -96,6 +141,16 @@ impl Color {
             g,
             b,
             a,
+            space: Space::Unknown,
+        }
+    }
+
+    pub fn from_rgba8(r: u8, g: u8, b: u8, a: u8) -> Self {
+        Color {
+            r: r as f32 / 255.0,
+            g: g as f32 / 255.0,
+            b: b as f32 / 255.0,
+            a: a as f32 / 255.0,
             space: Space::Unknown,
         }
     }
@@ -240,6 +295,13 @@ impl Add for Color {
             a: self.a + rhs.a,
             space: self.space,
         }
+    }
+}
+
+impl Distribution<Color> for Standard {
+    fn sample<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> Color {
+        let r = rng.gen_range(0..Color::DEBUG_RANDOM_COLORS.len());
+        Color::DEBUG_RANDOM_COLORS[r]
     }
 }
 
