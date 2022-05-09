@@ -118,11 +118,11 @@ pub fn flatten<'a>(
                         intersections += node_splits.len();
 
                         change_buffer.replace(segment_id, first_point, |x, y| {
-                            curve.splitn(&node_splits, x, y);
+                            curve.splitn(node_splits.iter(), x, y);
                         });
 
                         change_buffer.replace(c_segment_id, c_first_point, |x, y| {
-                            c_curve.splitn(&candidate_splits, x, y);
+                            c_curve.splitn(candidate_splits.iter(), x, y);
                         });
 
                         node.last_touched.replace(iteration);

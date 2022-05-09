@@ -1,4 +1,7 @@
-use super::{point::Point, rect::Rect};
+use super::{
+    point::Point,
+    rect::{BoundingBox, Rect},
+};
 use crate::{
     math::{
         matrix4::{Mat1x4, Mat4x2, Mat4x4},
@@ -10,7 +13,7 @@ use crate::{
 
 mod intersection;
 
-pub trait Bezier: Sized {
+pub trait Bezier: Sized + BoundingBox {
     type Owning;
 
     #[must_use]
@@ -37,7 +40,9 @@ pub trait Bezier: Sized {
     #[must_use]
     fn split2(&self, t1: f32, t3: f32) -> (Self::Owning, Self::Owning, Self::Owning);
 
-    fn splitn<'b, 'c>(&self, t: &[f32], buffer_x: &'b mut Vec<f32>, buffer_y: &'c mut Vec<f32>);
+    fn splitn<'a, 'b, 'c, I>(&self, t: I, buffer_x: &'b mut Vec<f32>, buffer_y: &'c mut Vec<f32>)
+    where
+        I: Iterator<Item = &'a f32>;
 
     #[must_use]
     fn find_intersections(&self, other: &Self) -> (ArrayVec<f32, 9>, ArrayVec<f32, 9>);
@@ -109,13 +114,30 @@ impl Bezier for Cubic {
     }
 
     #[inline]
-    fn splitn<'b, 'c>(&self, t: &[f32], buffer_x: &'b mut Vec<f32>, buffer_y: &'c mut Vec<f32>) {
-        splitn(self.as_slice(), t, buffer_x, buffer_y)
+    fn splitn<'a, 'b, 'c, I>(&self, t: I, buffer_x: &'b mut Vec<f32>, buffer_y: &'c mut Vec<f32>)
+    where
+        I: Iterator<Item = &'a f32>,
+    {
+        splitn(self.as_slice(), t.cloned(), buffer_x, buffer_y)
     }
 
     #[inline]
     fn find_intersections(&self, other: &Self) -> (ArrayVec<f32, 9>, ArrayVec<f32, 9>) {
         intersection::find(self.as_slice(), other.as_slice())
+    }
+}
+
+impl BoundingBox for Cubic {
+    #[inline]
+    fn bounding_box(&self) -> Rect {
+        self.coarse_bounds()
+    }
+}
+
+impl BoundingBox for &Cubic {
+    #[inline]
+    fn bounding_box(&self) -> Rect {
+        self.coarse_bounds()
     }
 }
 
@@ -188,13 +210,23 @@ impl<'a> Bezier for CubicSlice<'a> {
     }
 
     #[inline]
-    fn splitn<'b, 'c>(&self, t: &[f32], buffer_x: &'b mut Vec<f32>, buffer_y: &'c mut Vec<f32>) {
-        splitn(*self, t, buffer_x, buffer_y)
+    fn splitn<'i, 'b, 'c, I>(&self, t: I, buffer_x: &'b mut Vec<f32>, buffer_y: &'c mut Vec<f32>)
+    where
+        I: Iterator<Item = &'i f32>,
+    {
+        splitn(*self, t.cloned(), buffer_x, buffer_y)
     }
 
     #[inline]
     fn find_intersections(&self, other: &Self) -> (ArrayVec<f32, 9>, ArrayVec<f32, 9>) {
         intersection::find(*self, *other)
+    }
+}
+
+impl<'a> BoundingBox for CubicSlice<'a> {
+    #[inline]
+    fn bounding_box(&self) -> Rect {
+        self.coarse_bounds()
     }
 }
 
@@ -276,20 +308,30 @@ fn split2(curve: CubicSlice, t1: f32, t2: f32) -> (Cubic, Cubic, Cubic) {
 
 fn splitn<'a, 'b>(
     curve: CubicSlice,
-    t: &[f32],
+    mut t: impl Iterator<Item = f32>,
     buffer_x: &'a mut Vec<f32>,
     buffer_y: &'b mut Vec<f32>,
 ) {
-    if !t.is_empty() {
+    if let Some(first_split) = t.next() {
         let mut prev_t = 0.0;
         let mut remainder = curve.as_owned();
 
         buffer_x.push(curve.x[0]);
         buffer_y.push(curve.y[0]);
 
+        let (left, rest) = split(
+            remainder.as_slice(),
+            (first_split - prev_t) / (1.0 - prev_t),
+        );
+        prev_t = first_split;
+        remainder = rest;
+
+        buffer_x.extend(&left.x[1..]);
+        buffer_y.extend(&left.y[1..]);
+
         for t in t {
-            let (left, rest) = split(remainder.as_slice(), (*t - prev_t) / (1.0 - prev_t));
-            prev_t = *t;
+            let (left, rest) = split(remainder.as_slice(), (t - prev_t) / (1.0 - prev_t));
+            prev_t = t;
             remainder = rest;
 
             buffer_x.extend(&left.x[1..]);
@@ -374,7 +416,7 @@ mod tests {
         let splits = [0.25, 0.5, 0.75];
         let mut out_x = vec![];
         let mut out_y = vec![];
-        bezier.splitn(&splits, &mut out_x, &mut out_y);
+        bezier.splitn(splits.iter(), &mut out_x, &mut out_y);
 
         assert_eq!(out_x.len(), 13);
         assert_eq!(out_y.len(), out_x.len());

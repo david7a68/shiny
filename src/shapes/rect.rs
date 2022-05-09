@@ -89,6 +89,24 @@ impl Rect {
         let b = Float4::new(rhs.right, rhs.bottom, self.right, self.bottom);
         a.less_or_equal(b) == (true, true, true, true)
     }
+
+    #[must_use]
+    pub fn contains(&self, point: Point) -> bool {
+        self.left <= point.x
+            && point.x <= self.right
+            && self.top <= point.y
+            && point.y <= self.bottom
+    }
+}
+
+pub trait BoundingBox {
+    fn bounding_box(&self) -> Rect;
+}
+
+impl BoundingBox for Rect {
+    fn bounding_box(&self) -> Rect {
+        *self
+    }
 }
 
 impl Default for Rect {
