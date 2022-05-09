@@ -1,7 +1,13 @@
 //! 2D bounding volume hierarchy.
 //!
 
-use crate::{shapes::{rect::{BoundingBox, Rect}, point::Point}, math::vector2::Vec2};
+use crate::{
+    math::vector2::Vec2,
+    shapes::{
+        point::Point,
+        rect::{BoundingBox, Rect},
+    },
+};
 
 /// A simple bounding volume hierarchy implemented as a binary space partition.
 pub struct Bvh<'a, T>
@@ -166,29 +172,6 @@ mod bvh_impl {
         cost: f32,
     }
 
-    struct IterIndirect<'a, T> {
-        items: &'a [T],
-        indirect: &'a [u32],
-        index: usize,
-    }
-
-    impl<'a, T> Iterator for IterIndirect<'a, T>
-    where
-        T: BoundingBox,
-    {
-        type Item = &'a T;
-
-        fn next(&mut self) -> Option<Self::Item> {
-            if self.index < self.indirect.len() {
-                let item = &self.items[self.indirect[self.index] as usize];
-                self.index += 1;
-                Some(item)
-            } else {
-                None
-            }
-        }
-    }
-
     fn compute_bounds_indirect<T>(items: &[T], indirect: &[u32]) -> Rect
     where
         T: BoundingBox,
@@ -200,18 +183,16 @@ mod bvh_impl {
         aabb
     }
 
-    fn leaf_items_indirect<'a, T>(bvh: &'a Bvh<T>, node_idx: usize) -> IterIndirect<'a, T>
+    fn leaf_items_indirect<'a, T>(bvh: &'a Bvh<T>, node_idx: usize) -> impl Iterator<Item = &'a T>
     where
         T: BoundingBox,
     {
         let node = &bvh.nodes[node_idx];
         match &node.data {
-            Data::Leaf(leaf) => IterIndirect {
-                items: bvh.items,
-                indirect: &bvh.indirect
-                    [leaf.first_indirect as usize..(leaf.first_indirect + leaf.count) as usize],
-                index: 0,
-            },
+            Data::Leaf(leaf) => bvh.indirect
+                [leaf.first_indirect as usize..(leaf.first_indirect + leaf.count) as usize]
+                .iter()
+                .map(|i| &bvh.items[*i as usize]),
             _ => panic!("expected leaf node"),
         }
     }
